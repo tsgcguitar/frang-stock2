@@ -7,7 +7,7 @@ st.set_page_config(page_title="台股飆股雷達-付費專業版", layout="wide
 
 # --- 🔑 付費驗證系統 ---
 # 你可以在這裡設定多組授權碼，或是未來對接資料庫
-VALID_KEYS = ["PREMIUM888", "STOCK2024", "FRANKVIP"] 
+VALID_KEYS = ["PREMIUM888", "STOCK2026", "FRANKVVIP"] 
 
 with st.sidebar:
     st.header("🔐 會員登入")
@@ -25,7 +25,7 @@ with st.sidebar:
 
     st.divider()
     st.write("📩 **購買授權或回報問題**")
-    st.write("官方 LINE: @your_id")
+    st.write("官方 LINE: 811162")
     st.write("版本：v2.1 (付費專用版)")
 
 # 2. 核心功能 (只有驗證通過才會執行)
@@ -103,4 +103,5 @@ else:
                 st.dataframe(pd.DataFrame(top_picks), use_container_width=True, hide_index=True,
                              column_config={"連結": st.column_config.LinkColumn("查看線圖")})
             else:
+
                 st.warning("目前無符合標的。")
