@@ -136,12 +136,12 @@ if not st.session_state.is_login:
         st.subheader("🌙 月租專業版")
         st.markdown("## NT$ 199")
         if st.button("點我訂閱 (月)", use_container_width=True):
-            st.warning("【匯款資訊】永豐(807) 帳號: 148-018-00054187\n請傳截圖至 LINE: 811162")
+            st.warning("【匯款資訊】永豐(807) 帳號: 148-018-00054187\n請傳轉帳截圖與後5碼至 LINE: 811162")
     with col2:
-        st.subheader("☀️ 年租尊榮版")
+        st.subheader("☀️ 年租尊榮版 (省2個月!)")
         st.markdown("## NT$ 1,990")
         if st.button("點我訂閱 (年)", use_container_width=True, type="primary"):
-            st.error("【匯款資訊】永豐(807) 帳號: 148-018-00054187\n請傳截圖至 LINE: 811162")
+            st.error("【匯款資訊】永豐(807) 帳號: 148-018-00054187\n請傳轉帳截圖與後5碼至 LINE: 811162")
 
     st.divider()
     acc = st.text_input("輸入帳號")
@@ -214,3 +214,4 @@ else:
             if st.button("⚠️ 重置帳戶"):
                 save_user(st.session_state.user, 1000000.0, {})
                 st.rerun()
+
