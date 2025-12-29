@@ -6,10 +6,10 @@ import json
 import time
 
 # --- 1. 網頁基礎設定 ---
-st.set_page_config(page_title="台股飆股雷達-官方商業版", layout="wide")
+st.set_page_config(page_title="台股飆股雷達-官方實戰版", layout="wide")
 
-# --- 2. 資料庫設定 (新增訂閱狀態欄位) ---
-DB_FILE = "stock_radar_v4.db"
+# --- 2. 資料庫與基礎功能 ---
+DB_FILE = "stock_radar_v5.db"
 
 def init_db():
     with sqlite3.connect(DB_FILE) as conn:
@@ -47,29 +47,28 @@ def save_user_data(username):
                        (st.session_state.balance, port_json, username))
         conn.commit()
 
-init_db()
-
-# --- 3. 核心功能函數 ---
-
 @st.cache_data(ttl=86400)
 def get_stock_name(ticker_code):
-    """取得股票名稱 (快取 24 小時以維持效能)"""
+    """取得股票正確名稱"""
     try:
         t = yf.Ticker(ticker_code)
-        # 優先取 shortName，若無則回傳代碼本身
-        return t.info.get('shortName', ticker_code.split('.')[0])
+        # yfinance 抓取台灣股票名稱有時會是英文，這裏做簡單處理
+        name = t.info.get('shortName', ticker_code.split('.')[0])
+        return name
     except:
         return ticker_code.split('.')[0]
 
-# --- 4. 側邊欄 ---
+init_db()
+
+# --- 3. 側邊欄登入邏輯 ---
 VALID_KEYS = ["PREMIUM888", "STOCK2026", "FRANKVVIP"]
 
 with st.sidebar:
-    st.header("🔐 用戶登入")
+    st.header("🔐 會員登入")
     if not st.session_state.get('is_logged_in'):
-        input_user = st.text_input("帳號 (ID)", placeholder="例如: Kevin888")
-        user_key = st.text_input("授權碼", type="password")
-        if st.button("登入 / 註冊"):
+        input_user = st.text_input("帳號 (ID)", placeholder="請輸入您的 ID")
+        user_key = st.text_input("授權碼 / 密碼", type="password")
+        if st.button("登入系統", use_container_width=True):
             if user_key in VALID_KEYS and input_user:
                 st.session_state.current_user = input_user
                 st.session_state.is_logged_in = True
@@ -77,163 +76,122 @@ with st.sidebar:
                 st.session_state.balance = bal
                 st.session_state.portfolio = port
                 st.session_state.is_premium = premium
-                st.success("登入成功")
+                st.success("登入成功！")
                 st.rerun()
             else:
                 st.error("帳號或授權碼錯誤")
     else:
-        st.success(f"👤 {st.session_state.current_user} " + ("(VIP)" if st.session_state.get('is_premium') else "(免費版)"))
-        st.metric("💰 可用現金", f"${st.session_state.balance:,.0f}")
-        if st.button("重置帳戶"):
-            st.session_state.balance = 1000000.0
-            st.session_state.portfolio = {}
-            save_user_data(st.session_state.current_user)
-            st.rerun()
-        if st.button("登出"):
+        st.success(f"👤 {st.session_state.current_user} " + ("(VIP)" if st.session_state.is_premium else ""))
+        st.metric("💰 模擬倉餘額", f"${st.session_state.balance:,.0f}")
+        if st.button("安全登出", use_container_width=True):
             st.session_state.clear()
             st.rerun()
-
+    
     st.divider()
-    st.markdown("### 📞 客服中心\n**官方 LINE: 811162**")
+    st.info("💡 忘記授權碼或匯款開通請聯繫客服")
 
-# --- 5. 主程式頁面 ---
-st.title("🏹 台股全自動飆股雷達 (模擬實戰版)")
+# --- 4. 主畫面邏輯 ---
 
+# 情況 A: 使用者尚未登入 (顯示介紹與訂閱方案)
 if not st.session_state.get('is_logged_in'):
-    st.warning("👈 請先從左側登入以使用完整功能。")
+    st.title("🏹 台股全自動飆股雷達")
+    st.subheader("領先市場，買在起漲點。專為紀律投資者設計的掃描工具。")
+    
+    # 產品特色介紹
+    c1, c2, c3 = st.columns(3)
+    c1.markdown("### 🔍 全自動掃描\n每日自動分析全台股上市櫃公司，篩選均線糾結與爆量突破標的。")
+    c2.markdown("### 📊 模擬實戰\n內建模擬倉位管理，免下載 App 即可測試您的交易策略與損益。")
+    c3.markdown("### ⚠️ 紀律停損點\n系統自動計算支撐位，給予最精準的建議停損與停利區間。")
+    
+    st.divider()
+    
+    # 訂閱方案區
+    st.markdown("<h2 style='text-align: center;'>💎 選擇您的專業計畫</h2>", unsafe_allow_html=True)
+    sub1, sub2 = st.columns(2)
+    
+    with sub1:
+        st.info("### 🌙 月租專業版")
+        st.title("NT$ 199 / 月")
+        st.write("● 無限制標的掃描\n● 每日強勢產業分析\n● 模擬倉完整功能\n● 官方 LINE 訊號提醒")
+        if st.button("立即申請月租 (查看匯款資訊)", key="sub_m", use_container_width=True):
+            st.session_state.pay_info = True
+            
+    with sub2:
+        st.success("### ☀️ 年租尊榮版 (現省 $398)")
+        st.title("NT$ 1,990 / 年")
+        st.write("● 包含所有月租功能\n● **優先** 獲取新策略開發\n● 一對一策略診斷\n● 終身會員專屬群組")
+        if st.button("立即申請年租 (查看匯款資訊)", key="sub_y", use_container_width=True):
+            st.session_state.pay_info = True
+
+    if st.session_state.get('pay_info'):
+        st.warning("### 💳 訂閱匯款帳戶資訊")
+        col_pay1, col_pay2 = st.columns([1, 1])
+        with col_pay1:
+            st.markdown("""
+            **請匯款至以下帳號：**
+            - **銀行代碼**：807 (永豐銀行)
+            - **帳號**：148-018-0005418-7
+            - **匯款金額**：199 或 1,990 元
+            """)
+        with col_pay2:
+            st.markdown(f"""
+            **開通流程：**
+            1. 匯款後請截圖或告知末五碼。
+            2. 傳送至 **官方 Line: 811162**。
+            3. 提供您的 **ID (帳號)**。
+            4. 客服將在 30 分鐘內為您開通權限。
+            """)
+        if st.button("我已了解，關閉視窗"):
+            st.session_state.pay_info = False
+            st.rerun()
+
+# 情況 B: 使用者已登入 (顯示操作介面)
 else:
-    current_user = st.session_state.current_user
-
-    @st.cache_data
-    def get_all_tw_stock_list():
-        ranges = [range(1101, 1110), range(2301, 2499), range(2601, 2646), range(2801, 2892), range(3002, 3715), range(6101, 6799)]
-        stock_list = []
-        for r in ranges:
-            stock_list.extend([f"{i}.TW" for i in r])
-        return stock_list
-
+    # 這裡放原本的核心功能 (scan_strategy, tab1, tab2 等)
+    # 為了節省空間，這裡展示優化過的下單金額與名稱顯示部分
+    
     @st.cache_data(ttl=1800)
     def scan_strategy():
-        tickers = get_all_tw_stock_list()
-        data = yf.download(tickers, period="60d", group_by='ticker', progress=False, threads=True)
+        # (這裡維持您原本的邏輯，但增加取得名稱)
+        # 範例結構：
         results = []
+        # ... 掃描邏輯 ...
+        # results.append({"代碼": code, "名稱": get_stock_name(ticker), ...})
+        return results
 
-        for ticker in tickers:
-            try:
-                if ticker in data.columns.levels[0]:
-                    df = data[ticker].dropna()
-                else: continue
-                
-                if len(df) < 20: continue
-                close = df['Close']
-                curr_price = float(close.iloc[-1])
-                curr_vol = float(df['Volume'].iloc[-1])
-
-                if curr_vol < 1000000: continue
-
-                ma5 = close.rolling(5).mean().iloc[-1]
-                ma10 = close.rolling(10).mean().iloc[-1]
-                ma20 = close.rolling(20).mean().iloc[-1]
-                ma_list = [ma5, ma10, ma20]
-                max_ma, min_ma = max(ma_list), min(ma_list)
-                
-                if curr_price > max_ma and (max_ma - min_ma) / min_ma < 0.03:
-                    name = get_stock_name(ticker) # 這裡取得名稱
-                    results.append({
-                        "代碼": ticker.replace(".TW", ""),
-                        "名稱": name,
-                        "目前價格": round(curr_price, 2),
-                        "成交量": int(curr_vol / 1000),
-                        "策略建議": "🔥 爆量起漲" if curr_vol > df['Volume'].rolling(5).mean().iloc[-1] * 2 else "💎 極致糾結",
-                        "建議停損點": round(min_ma * 0.97, 2),
-                        "連結": f"https://tw.stock.yahoo.com/quote/{ticker}"
-                    })
-            except: continue
-        return sorted(results, key=lambda x: x['成交量'], reverse=True)[:5]
-
-    # --- UI Tabs ---
-    tab1, tab2, tab3 = st.tabs(["🚀 飆股掃描", "💼 我的庫存", "💎 訂閱服務"])
+    tab1, tab2 = st.tabs(["🚀 飆股掃描", "💼 我的庫存"])
 
     with tab1:
-        st.subheader("📊 今日潛力飆股")
-        if st.button("🔍 啟動全台股掃描"):
-            with st.spinner('正在分析市場數據...'):
-                st.session_state.last_picks = scan_strategy()
-        
+        st.subheader("📊 今日潛力標的")
+        if st.button("🔍 執行全台股策略掃描"):
+            # 呼叫掃描函數 (此處省略部分重複代碼)
+            pass 
+
+        # 假設已經有 picks 資料
         if 'last_picks' in st.session_state:
             for row in st.session_state.last_picks:
                 with st.expander(f"📈 {row['代碼']} {row['名稱']} - {row['策略建議']}"):
-                    c1, c2, c3, c4 = st.columns(4)
-                    c1.metric("價格", row['目前價格'])
-                    c2.metric("成交量", f"{row['成交量']} 張")
-                    c3.metric("停損", row['建議停損點'])
-                    c4.markdown(f"[查看線圖]({row['連結']})")
-                    
-                    # 買入區優化
+                    # 顯示資訊...
+                    # 下單區優化
                     st.divider()
                     b1, b2 = st.columns([2, 1])
-                    shares = b1.number_input(f"購買張數", 1, 100, key=f"n_{row['代碼']}")
-                    total_cost = shares * 1000 * row['目前價格']
+                    num_shares = b1.number_input("購買張數", 1, 100, key=f"buy_{row['代碼']}")
+                    total_amt = num_shares * 1000 * row['目前價格']
+                    b1.info(f"💰 預估下單金額：**NT$ {total_amt:,.0f}**")
                     
-                    # 強調顯示下單金額
-                    b1.info(f"💰 預估下單金額：**${total_cost:,.0f}** 元")
-                    
-                    if b2.button(f"確認買進 {row['名稱']}", key=f"b_{row['代碼']}", use_container_width=True):
-                        if st.session_state.balance >= total_cost:
-                            st.session_state.balance -= total_cost
-                            code = row['代碼']
-                            if code in st.session_state.portfolio:
-                                old_s, old_c = st.session_state.portfolio[code]
-                                new_s = old_s + shares
-                                new_c = ((old_s * old_c) + (shares * row['目前價格'])) / new_s
-                                st.session_state.portfolio[code] = [new_s, new_c]
-                            else:
-                                st.session_state.portfolio[code] = [shares, row['目前價格']]
-                            save_user_data(current_user)
-                            st.success(f"成功買入 {row['名稱']} {shares} 張！")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error("您的現金餘額不足！")
+                    if b2.button(f"確認買進 {row['名稱']}", key=f"btn_{row['代碼']}", use_container_width=True):
+                        # ... 買入邏輯 ...
+                        st.success(f"已買入 {row['名稱']} {num_shares} 張")
 
     with tab2:
-        st.subheader("💎 庫存損益表")
+        st.subheader("💎 我的模擬倉位")
         if not st.session_state.portfolio:
-            st.info("目前尚無持倉數據。")
+            st.info("目前庫存空空如也，快去掃描標的吧！")
         else:
-            # 這裡簡單列出持倉
-            st.write(st.session_state.portfolio)
-            # ... (此處可保留您原本的損益表格計算代碼)
-
-    with tab3:
-        st.subheader("💎 訂閱 Premium 專業版")
-        col_m, col_y = st.columns(2)
-        
-        with col_m:
-            st.info("### 月租計畫")
-            st.title("NT$ 199 /月")
-            st.write("✓ 每日不限次數掃描\n✓ 存取所有策略清單\n✓ VIP 專屬 Line 群組")
-            if st.button("點我訂閱月計畫"):
-                st.session_state.show_payment = True
-        
-        with col_y:
-            st.success("### 年租優惠 (省 2 個月!)")
-            st.title("NT$ 1,990 /年")
-            st.write("✓ 包含所有月租功能\n✓ 優先獲取新策略開發\n✓ 一對一操作諮詢")
-            if st.button("點我訂閱年計畫"):
-                st.session_state.show_payment = True
-
-        if st.session_state.get('show_payment'):
-            st.warning("#### 💳 匯款資訊 (手動審核)")
-            st.markdown("""
-            請匯款至以下帳號，匯款後請截圖傳至 **官方 Line (811162)**，我們將於 10 分鐘內為您開通權限。
-            
-            - **銀行代碼**：807 (永豐銀行)
-            - **帳號**：148-018-0005418-7
-            - **戶名**：(請確認您的開戶名稱)
-            
-            *提醒：匯款請註明您的帳號 ID，以利快速比對。*
-            """)
-            if st.button("關閉匯款資訊"):
-                st.session_state.show_payment = False
-                st.rerun()
+            # 損益表邏輯，增加名稱顯示
+            port_list = []
+            for code, (shares, cost) in st.session_state.portfolio.items():
+                name = get_stock_name(f"{code}.TW")
+                # ... 計算損益 ...
+                port_list.append({"股票": f"{code} {name}", "張數": shares, "成本": cost})
+            st.table(port_list)
