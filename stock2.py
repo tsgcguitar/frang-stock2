@@ -4,251 +4,213 @@ import pandas as pd
 import sqlite3
 import json
 import time
-from datetime import datetime
 
-# --- 1. 系統設定與資料庫初始化 ---
-st.set_page_config(page_title="台股起漲點雷達-官方版", layout="wide")
+# --- 1. 系統設定與資料庫 ---
+st.set_page_config(page_title="台股飆股雷達-專業版", layout="wide")
+DB_FILE = "trading_radar_v9.db"
 
-# 初始化資料庫
 def init_db():
-    conn = sqlite3.connect("trading_radar_v8.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            username TEXT PRIMARY KEY,
-            balance REAL,
-            portfolio TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                balance REAL,
+                portfolio TEXT
+            )
+        """)
 
-def load_user_data(username):
-    conn = sqlite3.connect("trading_radar_v8.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT balance, portfolio FROM users WHERE username = ?", (username,))
-    row = cursor.fetchone()
-    conn.close()
-    if row:
-        return row[0], json.loads(row[1])
-    else:
-        # 初始 100 萬起始金
+def load_user(username):
+    with sqlite3.connect(DB_FILE) as conn:
+        row = conn.execute("SELECT balance, portfolio FROM users WHERE username = ?", (username,)).fetchone()
+        if row: return row[0], json.loads(row[1])
         return 1000000.0, {}
 
-def save_user_data(username, balance, portfolio):
-    conn = sqlite3.connect("trading_radar_v8.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT OR REPLACE INTO users (username, balance, portfolio) VALUES (?, ?, ?)",
-                   (username, balance, json.dumps(portfolio)))
-    conn.commit()
-    conn.close()
+def save_user(username, bal, port):
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("INSERT OR REPLACE INTO users VALUES (?, ?, ?)", (username, bal, json.dumps(port)))
 
-# --- 2. 核心掃描策略 (修正掃描沒反應的問題) ---
+# --- 2. 核心掃描引擎 (強化版邏輯) ---
+def get_stock_strategy(df, close, vol, ma_list):
+    ma5, ma10, ma20 = ma_list
+    ma_max, ma_min = max(ma_list), min(ma_list)
+    gap = (ma_max - ma_min) / ma_min
+    vol_ma5 = df['Volume'].rolling(5).mean().iloc[-1]
+    
+    # 策略 1: 均線糾結突破 (最強推)
+    if gap <= 0.03 and close > ma_max:
+        return "均線糾結突破 (主力收籌結束)"
+    # 策略 2: 價量齊揚
+    if close > ma5 and vol > (vol_ma5 / 1000 * 1.5):
+        return "價量齊揚 (動能噴發)"
+    # 策略 3: 底部回升
+    if close > ma20 and df['Close'].iloc[-5] < ma20:
+        return "多頭回歸 (底部轉折)"
+    return "趨勢觀察"
+
 @st.cache_data(ttl=3600)
-def get_all_taiwan_tickers():
-    """產生台股清單: 上市(.TW)與上櫃(.TWO)常用區間"""
-    # 這裡僅列出主要區間，實務上可導入更完整的 excel 清單
-    list_tw = [f"{i}.TW" for i in range(1101, 9999)]
-    list_two = [f"{i}.TWO" for i in range(1101, 9999)]
-    return list_tw + list_two
+def get_all_tickers():
+    # 模擬 1700 檔清單 (實際環境可導入 csv)
+    return [f"{i}.TW" for i in range(1101, 2500)] + [f"{i}.TWO" for i in range(3000, 8000)]
 
-def run_radar_scan(ticker_list):
+def run_radar():
     results = []
-    found_count = 0
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    found = 0
+    all_codes = get_all_tickers()
     
-    # 為了加速，我們採取分批抽樣掃描，或在實際環境中縮小範圍
-    # yf.download 建議不要一次超過 100 檔，否則易被封 IP 或超時
-    batch_size = 50
-    total_to_check = 600 # 限制掃描前 600 檔以確保速度，可根據需求調整
+    status = st.empty()
+    bar = st.progress(0)
     
-    for i in range(0, total_to_check, batch_size):
-        batch = ticker_list[i : i + batch_size]
-        status_text.text(f"正在雷達掃描中... 已掃描 {i}/{total_to_check} 檔")
-        progress_bar.progress(i / total_to_check)
+    # 每次掃描分片處理，避免超時
+    step = 50 
+    for i in range(0, 1000, step): # 範例掃描前 1000 檔
+        batch = all_codes[i:i+step]
+        status.text(f"雷達搜尋中... 已掃描 {i} 檔")
+        bar.progress(i/1000)
         
         try:
-            # 抓取最近 40 天資料
             data = yf.download(batch, period="40d", group_by='ticker', progress=False, threads=True)
-            
-            for ticker in batch:
-                if found_count >= 5: break # 限制顯示 5 檔
+            for t in batch:
+                if found >= 5: break
+                df = data[t].dropna()
+                if len(df) < 22: continue # 排除新股
                 
-                df = data[ticker] if len(batch) > 1 else data
-                df = df.dropna()
-                
-                if len(df) < 25: continue # 排除新股 (至少要能算出20MA)
-                
-                # 計算數據
                 close = float(df['Close'].iloc[-1])
-                vol = float(df['Volume'].iloc[-1]) / 1000 # 換算張數
+                vol = float(df['Volume'].iloc[-1]) / 1000 # 張
                 ma5 = df['Close'].rolling(5).mean().iloc[-1]
                 ma10 = df['Close'].rolling(10).mean().iloc[-1]
                 ma20 = df['Close'].rolling(20).mean().iloc[-1]
-                
-                # 邏輯判斷
                 ma_list = [ma5, ma10, ma20]
-                ma_max, ma_min = max(ma_list), min(ma_list)
-                gap = (ma_max - ma_min) / ma_min # 糾結度
                 
-                # 篩選條件
-                cond_vol = vol >= 1000 # 成交量 > 1000張
-                cond_knot = gap <= 0.03 # 均線糾結 3% 以內
-                cond_break = close > ma_max # 站上所有均線
-                cond_not_too_high = (close - ma5) / ma5 <= 0.035 # 離5MA不超過3.5%
+                # 嚴格篩選條件
+                if vol < 1000: continue # 排除冷門
+                if (close - ma5) / ma5 > 0.035: continue # 排除追高
+                if close < max(ma_list): continue # 必須站上均線
                 
-                if cond_vol and cond_knot and cond_break and cond_not_too_high:
-                    # 獲取產業資訊
-                    try:
-                        info = yf.Ticker(ticker).info
-                        industry = info.get('industry', '其他')
-                    except:
-                        industry = "資訊傳輸中"
-                        
-                    results.append({
-                        "代碼": ticker.split('.')[0],
-                        "產業": industry,
-                        "目前價格": round(close, 2),
-                        "成交量": int(vol),
-                        "策略建議": "均線糾結突破 (起漲點)",
-                        "建議停損點": round(ma_min * 0.98, 2),
-                        "建議停利點": round(close * 1.15, 2),
-                        "連結": f"https://www.wantgoo.com/stock/{ticker.split('.')[0]}"
-                    })
-                    found_count += 1
-        except Exception as e:
-            continue
-            
-        if found_count >= 5: break
+                strategy = get_stock_strategy(df, close, vol, ma_list)
+                if strategy == "趨勢觀察": continue
 
-    progress_bar.empty()
-    status_text.empty()
+                results.append({
+                    "代碼": t.split('.')[0],
+                    "價格": round(close, 2),
+                    "成交量": int(vol),
+                    "策略": strategy,
+                    "停損": round(min(ma_list) * 0.98, 2),
+                    "停利": round(close * 1.15, 2),
+                    "網址": f"https://www.wantgoo.com/stock/{t.split('.')[0]}"
+                })
+                found += 1
+        except: continue
+        if found >= 5: break
+    bar.empty()
+    status.empty()
     return results
 
-# --- 3. UI 介面實作 ---
+# --- 3. UI 介面 ---
 init_db()
+if 'is_login' not in st.session_state: st.session_state.is_login = False
 
-# Session State 初始化
-if 'is_logged_in' not in st.session_state:
-    st.session_state.is_logged_in = False
-
-# 側邊欄：登入與基本資訊
+# 側邊欄
 with st.sidebar:
-    st.header("🔐 雷達系統登入")
-    if not st.session_state.is_logged_in:
-        user_id = st.text_input("帳號 (ID)")
-        user_pw = st.text_input("授權碼 / 密碼", type="password")
-        if st.button("啟動雷達系統", use_container_width=True):
-            if user_pw in ["PREMIUM888", "STOCK2026", "FRANKVVIP"] and user_id:
-                bal, port = load_user_data(user_id)
-                st.session_state.current_user = user_id
-                st.session_state.balance = bal
-                st.session_state.portfolio = port
-                st.session_state.is_logged_in = True
-                st.rerun()
-            else:
-                st.error("授權碼無效，請聯繫下方 LINE 客服")
-    else:
-        st.success(f"👤 用戶: {st.session_state.current_user}")
-        st.metric("💰 模擬倉餘額", f"${st.session_state.balance:,.0f}")
-        if st.button("登出帳號"):
+    if st.session_state.is_login:
+        st.success(f"👤 用戶: {st.session_state.user}")
+        st.metric("💰 模擬倉餘額", f"${st.session_state.bal:,.0f}")
+        if st.button("登出"): 
             st.session_state.clear()
             st.rerun()
-    
     st.divider()
-    st.write("🆘 訂閱與技術支援")
-    st.info("官方 LINE ID: **811162**")
+    st.info("訂閱問題 官方line: 811162")
 
-# 主頁面邏輯
-if not st.session_state.is_logged_in:
-    # --- 登入前：顯示產品說明與訂閱計畫 ---
+# 主頁面
+if not st.session_state.is_login:
     st.title("🏹 台股全自動飆股雷達")
     st.markdown("### 領先市場，買在起漲點")
     
-    col_info, col_img = st.columns([2, 1])
-    with col_info:
-        st.info("""
-        **關於此工具** 這是一款專為不喜歡追高的投資者又想要買在起漲點設計的雷達。
-        
-        **📢 操作小提醒：**
-        1. **停損建議**：若收盤價跌破『建議停損點』，應果斷執行紀律。
-        2. **量能門檻**：已過濾成交量 < 1000 張的冷門股。
-        3. **產業連動**：若同產業多檔上榜，則該族群為強勢主流。
-        """)
-    
+    with st.expander("📢 工具使用說明與小提醒", expanded=True):
+        st.write("這是一款專為不喜歡追高的投資者設計的雷達。")
+        st.write("* **停損建議**：跌破均線群底端應執行紀律。")
+        st.write("* **量能門檻**：已過濾成交量 < 1000 張的股票。")
+
     st.divider()
-    st.subheader("💎 選擇您的訂閱計畫")
-    plan1, plan2 = st.columns(2)
-    
-    with plan1:
-        st.markdown("#### 🌙 月租專業版")
-        st.code("NT$ 199 / 月")
-        if st.button("查看付款資訊 (月租)", use_container_width=True):
-            st.warning("【匯款資訊】\n銀行：永豐銀行 (807)\n帳號：148-018-00054187\n金額：199 元\n\n💡 匯款後請截圖發送至 811162 LINE ID，附上後五碼，將於30分鐘內幫您開通。")
-            
-    with plan2:
-        st.markdown("#### ☀️ 年租尊榮版")
-        st.code("NT$ 1,990 / 年")
-        if st.button("查看付款資訊 (年租)", use_container_width=True, type="primary"):
-            st.warning("【匯款資訊】\n銀行：永豐銀行 (807)\n帳號：148-018-00054187\n金額：1,990 元\n\n💡 匯款後請截圖發送至 811162 LINE ID，附上後五碼，將於30分鐘內幫您開通。")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("🌙 月租專業版")
+        st.markdown("## NT$ 199")
+        if st.button("點我訂閱 (月)", use_container_width=True):
+            st.warning("【匯款資訊】永豐(807) 帳號: 148-018-00054187\n請傳截圖至 LINE: 811162")
+    with col2:
+        st.subheader("☀️ 年租尊榮版")
+        st.markdown("## NT$ 1,990")
+        if st.button("點我訂閱 (年)", use_container_width=True, type="primary"):
+            st.error("【匯款資訊】永豐(807) 帳號: 148-018-00054187\n請傳截圖至 LINE: 811162")
+
+    st.divider()
+    acc = st.text_input("輸入帳號")
+    pwd = st.text_input("授權碼", type="password")
+    if st.button("登入系統", use_container_width=True):
+        if pwd in ["PREMIUM888", "STOCK2026"]:
+            bal, port = load_user(acc)
+            st.session_state.update({"is_login":True, "user":acc, "bal":bal, "port":port})
+            st.rerun()
 
 else:
-    # --- 登入後：功能分頁 ---
-    tab1, tab2 = st.tabs(["🚀 起漲點掃描", "💼 個人模擬倉"])
+    t1, t2 = st.tabs(["🚀 起漲點掃描", "💼 個人模擬倉"])
     
-    with tab1:
-        if st.button("🔍 開始掃描全台股突破標的", type="primary", use_container_width=True):
-            with st.spinner("雷達正在過濾全台股標的，請稍候..."):
-                all_tickers = get_all_taiwan_tickers()
-                st.session_state.scan_results = run_radar_scan(all_tickers)
-        
-        if 'scan_results' in st.session_state:
-            if not st.session_state.scan_results:
-                st.warning("目前市場尚未篩選到符合「糾結突破」條件的標的，請稍後再試。")
-            else:
-                for s in st.session_state.scan_results:
-                    with st.expander(f"📈 {s['代碼']} - {s['產業']} | 現價: {s['目前價格']}", expanded=True):
-                        c1, c2 = st.columns([1, 1])
-                        with c1:
-                            st.write(f"**成交量:** {s['成交量']} 張")
-                            st.write(f"**策略建議:** :blue[{s['策略建議']}]")
-                            st.write(f"**建議停損:** :red[{s['建議停損點']}] | **停利:** :green[{s['建議停利點']}]")
-                            st.markdown(f"[🔗 點我查看即時線圖]({s['連結']})")
-                        
-                        with c2:
-                            num = st.number_input("購買張數", 1, 100, key=f"n_{s['代碼']}")
-                            total_cost = num * 1000 * s['目前價格']
-                            st.markdown(f"#### 預估金額: :orange[NT$ {total_cost:,.0f}]")
-                            if st.button(f"確認下單 {s['代碼']}", key=f"b_{s['代碼']}"):
-                                if st.session_state.balance >= total_cost:
-                                    st.session_state.balance -= total_cost
-                                    # 更新庫存 (平均成本計算)
-                                    code = s['代碼']
-                                    old_q, old_c = st.session_state.portfolio.get(code, [0, 0])
-                                    new_q = old_q + num
-                                    new_c = ((old_q * old_c) + total_cost) / new_q
-                                    st.session_state.portfolio[code] = [new_q, new_c]
-                                    
-                                    save_user_data(st.session_state.current_user, st.session_state.balance, st.session_state.portfolio)
-                                    st.success(f"✅ 成功購入 {code} {num}張！")
-                                    time.sleep(1)
-                                    st.rerun()
-                                else:
-                                    st.error("餘額不足，無法購買！")
-
-    with tab2:
-        st.subheader("📊 持股明細與資產")
-        if not st.session_state.portfolio:
-            st.info("目前模擬倉無持股。")
-        else:
-            p_data = []
-            for code, (q, c) in st.session_state.portfolio.items():
-                p_data.append({"股票代碼": code, "持股張數": q, "平均成本": round(c, 2), "總投入": round(q*c*1000, 0)})
-            st.dataframe(pd.DataFrame(p_data), use_container_width=True)
+    with t1:
+        if st.button("🔍 開始掃描全台股突破標的", type="primary"):
+            st.session_state.scan = run_radar()
             
-            if st.button("⚠️ 重置帳戶資產 (回復至100萬)"):
-                st.session_state.balance = 1000000.0
-                st.session_state.portfolio = {}
-                save_user_data(st.session_state.current_user, 1000000.0, {})
+        if 'scan' in st.session_state:
+            for s in st.session_state.scan:
+                with st.expander(f"📈 {s['代碼']} | {s['策略']} | 現價: {s['價格']}"):
+                    c1, c2 = st.columns(2)
+                    c1.write(f"成交量: {s['成交量']} 張")
+                    c1.write(f"停損: :red[{s['停損']}] | 停利: :green[{s['停利']}]")
+                    c1.markdown(f"[🔗 查看即時線圖]({s['網址']})")
+                    
+                    buy_n = c2.number_input("張數", 1, 100, key=f"n_{s['代碼']}")
+                    cost = buy_n * 1000 * s['價格']
+                    c2.markdown(f"#### 金額: :blue[NT$ {cost:,.0f}]")
+                    if c2.button(f"買入 {s['代碼']}", key=f"b_{s['代碼']}"):
+                        if st.session_state.bal >= cost:
+                            st.session_state.bal -= cost
+                            code = s['代碼']
+                            q, c = st.session_state.port.get(code, [0, 0])
+                            new_q = q + buy_n
+                            new_cost = ((q * c) + cost) / new_q
+                            st.session_state.port[code] = [new_q, new_cost]
+                            save_user(st.session_state.user, st.session_state.bal, st.session_state.port)
+                            st.success("購入成功！")
+                            st.rerun()
+
+    with t2:
+        st.subheader("📊 持股明細與獲利分析")
+        if not st.session_state.port:
+            st.info("目前無持股")
+        else:
+            for code, (q, avg_c) in list(st.session_state.port.items()):
+                # 抓取最新價算損益
+                try:
+                    curr_p = yf.Ticker(f"{code}.TW").fast_info['last_price']
+                except:
+                    curr_p = avg_c
+                
+                profit = (curr_p - avg_c) * q * 1000
+                p_ratio = (curr_p - avg_c) / avg_c * 100
+                color = "red" if profit >= 0 else "green" # 台股習慣
+
+                with st.container(border=True):
+                    cols = st.columns([1, 1, 1, 1, 1])
+                    cols[0].write(f"**{code}**")
+                    cols[1].write(f"{q} 張")
+                    cols[2].write(f"成本: {avg_c:.2f}")
+                    cols[3].write(f"損益: :{color}[{profit:,.0f} ({p_ratio:.2f}%)]")
+                    if cols[4].button("賣出", key=f"sell_{code}"):
+                        st.session_state.bal += (curr_p * q * 1000)
+                        del st.session_state.port[code]
+                        save_user(st.session_state.user, st.session_state.bal, st.session_state.port)
+                        st.toast(f"{code} 已全數賣出")
+                        st.rerun()
+            
+            if st.button("⚠️ 重置帳戶"):
+                save_user(st.session_state.user, 1000000.0, {})
                 st.rerun()
