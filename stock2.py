@@ -60,7 +60,7 @@ def get_valid_tw_tickers():
     
     codes = []
     
-    # 修正重點：info 是 namedtuple，必須用 info.type 讀取，不能用 info['type']
+    # 修正重點：info 是 namedtuple，必須用 info.type 讀取
     for code, info in twse.items():
         try:
             if info.type == '股票' and len(code) == 4:
@@ -280,5 +280,3 @@ else:
                  st.session_state.bal = 1000000.0
                  st.session_state.port = {}
                  st.rerun()
-```[[3](https://www.google.com/url?sa=E&q=https%3A%2F%2Fvertexaisearch.cloud.google.com%2Fgrounding-api-redirect%2FAUZIYQHMIVNGhvFs9r0Kop47fg_HuGOewudNiyykZk35pnr4l0VEqeqewPHqoY4fcALRe2ZowoA5-P58uLNAJjr_SP5mS4dzZmom5zkck9BvTXjj37t8v7bt-YRv0iz8lBM6xNeT-ADjT6Iltm4%3D)]
-
