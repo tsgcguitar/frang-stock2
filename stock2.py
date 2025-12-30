@@ -6,221 +6,184 @@ import time
 import twstock
 from supabase import create_client, Client
 
-# --- 1. 設定與金鑰 ---
+# --- 1. 初始化與 UI ---
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
+
+# 藍色高科技風格 CSS
+st.markdown("""
+    <style>
+    .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
+    h1, h2, h3, .stTabs [aria-selected="true"] { color: #00E5FF !important; text-shadow: 0 0 8px rgba(0, 229, 255, 0.4); }
+    .stock-card {
+        background: rgba(0, 30, 60, 0.75); border: 1px solid #00B0FF;
+        box-shadow: 0 0 15px rgba(0, 176, 255, 0.3) inset; padding: 20px; border-radius: 12px; margin-bottom: 20px;
+    }
+    .stButton>button { background: linear-gradient(to bottom, #00B0FF, #0081CB); color: white !important; border-radius: 8px; }
+    .profit-up { color: #FF3333 !important; } .profit-down { color: #00FF66 !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
 SUPABASE_URL = "https://jhphmcbqtprfhvdkklps.supabase.co"
 SUPABASE_KEY = "sb_publishable_qfe3kH2yYYXN_PI7KNCZMg_UJmcvJWE"
-
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 except:
     st.error("⚠️ 雲端資料庫連線中斷")
 
-# --- 2. 全新 UI：藍色高科技光感風格 (參考 cite: 8) ---
-st.markdown("""
-    <style>
-    /* 整體背景 - 深藍科技漸層 */
-    .stApp {
-        background: linear-gradient(to bottom right, #001233, #000814);
-        color: #E0F7FA; /* 亮青白色文字 */
-    }
-
-    /* 標題與選中分頁 - 發光青色 */
-    h1, h2, h3, span, p, .stTabs [aria-selected="true"] {
-        color: #00E5FF !important; /* 電光青 */
-        text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
-    }
-    
-    /* 未選中分頁顏色 */
-    .stTabs [data-baseweb="tab"] { color: #577399; }
-
-    /* 股票卡片 - 半透明藍色玻璃面板 + 發光邊框 */
-    .stock-card {
-        background: rgba(0, 30, 60, 0.75); /* 半透明深藍 */
-        border: 1px solid #00B0FF; /* 亮藍邊框 */
-        box-shadow: 0 0 15px rgba(0, 176, 255, 0.3) inset; /* 內部光暈 */
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(5px); /* 毛玻璃效果 */
-    }
-
-    /* 按鈕美化 - 藍色漸層光暈 */
-    .stButton>button {
-        background: linear-gradient(to bottom, #00B0FF, #0081CB);
-        color: #FFFFFF !important;
-        border: none;
-        border-radius: 8px;
-        font-weight: bold;
-        transition: 0.3s;
-        box-shadow: 0 0 10px rgba(0, 176, 255, 0.5);
-    }
-    .stButton>button:hover {
-        background: linear-gradient(to bottom, #40CFFF, #00A5FF);
-        box-shadow: 0 0 20px rgba(64, 207, 255, 0.8);
-        transform: translateY(-2px);
-    }
-
-    /* 獲利與虧損 - 霓虹光感 */
-    .profit-up { color: #FF3333 !important; text-shadow: 0 0 5px rgba(255, 51, 51, 0.6); } /* 霓虹紅 */
-    .profit-down { color: #00FF66 !important; text-shadow: 0 0 5px rgba(0, 255, 102, 0.6); } /* 霓虹綠 */
-
-    /* 輸入框優化 */
-    [data-baseweb="input"] {
-        background-color: rgba(0, 40, 80, 0.8) !important;
-        border-color: #00B0FF !important;
-        color: #00E5FF !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 3. 核心功能函式 ---
+# --- 2. 核心邏輯 (規格 1, 2) ---
 @st.cache_data(ttl=86400)
-def get_stock_map():
+def get_all_tickers():
+    """抓取全台股 1700+ 檔代碼"""
     mapping = {}
+    # 上市
     for code, info in twstock.twse.items():
-        if len(code) == 4: mapping[f"{code}.TW"] = getattr(info, 'industry', '上市股')
+        if len(code) == 4:
+            mapping[f"{code}.TW"] = getattr(info, 'industry', '上市股')
+    # 上櫃
     for code, info in twstock.tpex.items():
-        if len(code) == 4: mapping[f"{code}.TWO"] = getattr(info, 'industry', '上櫃股')
+        if len(code) == 4:
+            mapping[f"{code}.TWO"] = getattr(info, 'industry', '上櫃股')
     return mapping
 
-def scan_logic(tickers, info_map):
+def run_full_scan(tickers_map):
     qualified = []
     status = st.empty()
     progress = st.progress(0)
-    # 限制掃描數量以維持效能，若要全掃請將 [:300] 拿掉
-    scan_limit = 300
-    target_tickers = tickers[:scan_limit]
     
-    for i, t in enumerate(target_tickers):
-        status.markdown(f"📡 系統掃描中... **{t}** ({i+1}/{len(target_tickers)})")
-        progress.progress((i+1) / len(target_tickers))
-        try:
-            df = yf.download(t, period="100d", progress=False).dropna()
-            if len(df) < 60: continue
+    ticker_list = list(tickers_map.keys())
+    total = len(ticker_list)
+    
+    # 開始全量掃描 (規格 1)
+    for i, t in enumerate(ticker_list):
+        if i % 20 == 0: # 每 20 檔更新一次介面，節省效能
+            status.markdown(f"📡 正在掃描全台股: **{t}** ({i}/{total})")
+            progress.progress(i / total)
             
-            close, vol = df['Close'].iloc[-1], df['Volume'].iloc[-1]
+        try:
+            # 抓取足夠計算 60MA 的資料
+            df = yf.download(t, period="150d", progress=False).dropna()
+            if len(df) < 60: continue # 排除新股 (規格 2)
+            
+            # 取最新數據
+            c = df['Close'].iloc[-1]
+            v = df['Volume'].iloc[-1]
             ma5 = df['Close'].rolling(5).mean().iloc[-1]
             ma10 = df['Close'].rolling(10).mean().iloc[-1]
             ma20 = df['Close'].rolling(20).mean().iloc[-1]
             ma60 = df['Close'].rolling(60).mean().iloc[-1]
-            avg_v20 = df['Volume'].rolling(20).mean().iloc[-1]
+            v20_avg = df['Volume'].rolling(20).mean().iloc[-1]
             
+            # 判斷邏輯 (規格 2)
             mas = [ma5, ma10, ma20, ma60]
-            # 規格邏輯檢查
-            cond_tangle = (max(mas)-min(mas))/min(mas) <= 0.03
-            cond_break = close > max(mas)
-            cond_near = (close-ma5)/ma5 <= 0.05
-            cond_vol = vol > avg_v20*1.5
-            cond_min_vol = vol >= 1000000 # yfinance volume單位為股
+            # 1. 均線糾結落差 3% 內
+            is_tangled = (max(mas) - min(mas)) / min(mas) <= 0.03
+            # 2. 股價站上所有均線
+            is_above = c > max(mas)
+            # 3. 離 5MA 不超過 5% (剛起漲)
+            is_near = (c - ma5) / ma5 <= 0.05
+            # 4. 今日量 > 20日均量 * 1.5
+            is_vol_up = v > (v20_avg * 1.5)
+            # 5. 過濾冷門股 (成交量 > 1000張)
+            is_not_cold = v >= 1000000 
 
-            if cond_tangle and cond_break and cond_near and cond_vol and cond_min_vol:
+            if is_tangled and is_above and is_near and is_vol_up and is_not_cold:
                 qualified.append({
-                    "代碼": t.split('.')[0], "產業": info_map.get(t), "現價": round(close,2),
-                    "成交量": int(vol//1000), "建議停損": round(ma60,2), "建議停利": round(close*1.15,2),
-                    "策略": "均線糾結+爆量起漲", "連結": f"https://www.wantgoo.com/stock/{t.split('.')[0]}"
+                    "代碼": t.split('.')[0], "產業": tickers_map.get(t), "現價": round(c, 2),
+                    "成交量": int(v // 1000), "建議停損": round(ma60, 2), "建議停利": round(c * 1.15, 2),
+                    "策略建議": "均線糾結強勢突破", "連結": f"https://www.wantgoo.com/stock/{t.split('.')[0]}"
                 })
-        except: continue
+        except:
+            continue
+            
     progress.empty()
     status.empty()
     return qualified
 
-# --- 4. 登入前頁面 ---
-if 'login' not in st.session_state or not st.session_state.login:
+# --- 3. 登入邏輯 (規格 3, 10, 11) ---
+if 'login' not in st.session_state:
+    st.session_state.login = False
+
+if not st.session_state.login:
     st.title("🏹 從從容容飆股王")
-    st.markdown("#### *專為不喜歡追高但又想要買在起漲點的投資者設計*")
+    st.markdown("### 🏆 買在起漲點，不追高雷達")
     
-    col1, col2 = st.columns(2)
-    with col1: st.markdown("<div class='stock-card'><h3>🌙 月租版</h3><h1>$299</h1></div>", unsafe_allow_html=True)
-    with col2: st.markdown("<div class='stock-card'><h3>☀️ 年費版</h3><h1>$2,990</h1><p>省2個月</p></div>", unsafe_allow_html=True)
+    # 規格 10: 訂閱方案
+    c1, c2 = st.columns(2)
+    with c1: st.markdown("<div class='stock-card'><h3>🌙 月租版</h3><h1>$299</h1></div>", unsafe_allow_html=True)
+    with c2: st.markdown("<div class='stock-card'><h3>☀️ 年費版</h3><h1>$2,990</h1><p>省2個月</p></div>", unsafe_allow_html=True)
     
-    with st.expander("💳 顯示訂閱付款資訊"):
+    # 規格 11: 付款資訊
+    with st.expander("💳 點擊查看付款資訊"):
         st.write("🏦 永豐銀行 (807) | 帳號：148-018-00054187")
         st.info("轉帳後截圖聯繫 官方Line: 811162，將於30分鐘內開通。")
 
-    st.divider()
-    u = st.text_input("👤 帳號")
-    p = st.text_input("🔑 授權碼", type="password")
-    if st.button("🚀 登入系統"):
-        if p == "STOCK2026":
-            res = supabase.table("users").select("*").eq("username", u).execute()
+    user = st.text_input("👤 帳號")
+    pwd = st.text_input("🔑 授權碼", type="password")
+    if st.button("🚀 登入"):
+        if pwd == "STOCK2026": # 範例授權碼
+            res = supabase.table("users").select("*").eq("username", user).execute()
             if res.data:
-                bal, port = res.data[0]['balance'], res.data[0]['portfolio']
+                u_data = res.data[0]
             else:
-                bal, port = 1000000.0, {}
-                supabase.table("users").insert({"username":u, "balance":bal, "portfolio":port}).execute()
-            st.session_state.login, st.session_state.user, st.session_state.bal, st.session_state.port = True, u, bal, port
+                u_data = {"username": user, "balance": 1000000, "portfolio": {}}
+                supabase.table("users").insert(u_data).execute()
+            
+            st.session_state.update({"login":True, "user":user, "bal":u_data['balance'], "port":u_data['portfolio']})
             st.rerun()
-        else: st.error("授權碼錯誤")
 
-# --- 5. 登入後頁面 ---
+# --- 4. 主功能分頁 (規格 4-9) ---
 else:
-    t1, t2 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉"])
+    tab1, tab2 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉"])
     
-    with t1:
-        if st.button("🔍 開始全量掃描"):
-            m = get_stock_map()
-            res = scan_logic(list(m.keys()), m)
+    with tab1:
+        if st.button("🔍 開始 1700 檔全量掃描 (需時較久)"):
+            all_m = get_all_tickers()
+            res = run_full_scan(all_m)
+            # 規格 8: 每次只吐 5 檔
             st.session_state.scan_res = random.sample(res, min(5, len(res)))
-            st.success(f"掃描完成！共發現 {len(res)} 檔，隨機顯示 5 檔。")
+            if not res: st.warning("今日全市場無符合「糾結突破」之股票，建議放寬條件或等待盤勢壓縮。")
         
         if 'scan_res' in st.session_state:
             for s in st.session_state.scan_res:
                 st.markdown(f"""
                 <div class='stock-card'>
-                    <div style='display:flex; justify-content:space-between; align-items:center;'>
-                        <span style='font-size:1.3em;'>{s['代碼']} - {s['產業']}</span>
-                        <span style='font-size:1.5em; color:#00E5FF;'>${s['現價']}</span>
-                    </div>
-                    <hr style='border-color:#00B0FF; opacity:0.3;'>
-                    <p>量: {s['成交量']}張 | 策略: {s['策略']}</p>
-                    <p>🛑 停損: <span class='profit-up'>{s['建議停損']}</span> | 🎯 停利: <span class='profit-down'>{s['建議停利']}</span></p>
-                    <a href='{s['連結']}' target='_blank' style='color:#00E5FF;'>🔗 查看 K 線圖</a>
+                    <h4>{s['代碼']} - {s['產業']} | <span style='color:#00E5FF'>現價: ${s['現價']}</span></h4>
+                    <p>📊 成交量: {s['成交量']} 張 | 💡 {s['策略建議']}</p>
+                    <p>🛑 建議停損: {s['建議停損']} (跌破60MA) | 🎯 建議停利: {s['建議停利']}</p>
+                    <a href='{s['連結']}' target='_blank' style='color:#00E5FF'>📈 查看詳細線圖</a>
                 </div>""", unsafe_allow_html=True)
                 
-                b1, b2 = st.columns([1, 1])
-                num = b1.number_input(f"張數", 1, 100, key=f"bn_{s['代碼']}")
-                if b2.button(f"買進 {s['代碼']}", key=f"b_{s['代碼']}"):
-                    cost = num * 1000 * s['現價']
+                if st.button(f"買進 {s['代碼']}", key=f"buy_{s['代碼']}"):
+                    cost = 1000 * s['現價']
                     if st.session_state.bal >= cost:
                         st.session_state.bal -= cost
-                        p = st.session_state.port
-                        p[s['代碼']] = p.get(s['代碼'], {'q':0, 'c':0})
-                        p[s['代碼']]['q'] += num; p[s['代碼']]['c'] += cost
-                        supabase.table("users").update({"balance": st.session_state.bal, "portfolio": p}).eq("username", st.session_state.user).execute()
-                        st.toast(f"已買入 {s['代碼']}"); time.sleep(0.5); st.rerun()
+                        st.session_state.port[s['代碼']] = st.session_state.port.get(s['代碼'], {'q':0, 'c':0})
+                        st.session_state.port[s['代碼']]['q'] += 1
+                        st.session_state.port[s['代碼']]['c'] += cost
+                        supabase.table("users").update({"balance": st.session_state.bal, "portfolio": st.session_state.port}).eq("username", st.session_state.user).execute()
+                        st.success(f"成功買進 {s['代碼']} 1張")
+                        st.rerun()
                     else: st.error("餘額不足")
 
-    with t2:
+    with tab2:
         st.subheader(f"💰 帳戶餘額: ${st.session_state.bal:,.0f}")
-        if not st.session_state.port:
-             st.info("暫無庫存")
-        else:
-            p_list = [f"{c}.TW" if ".TW" not in c else c for c in st.session_state.port.keys()]
-            try: curr_data = yf.download(p_list, period="1d", progress=False)['Close']
-            except: curr_data = pd.DataFrame()
-
+        # 規格 7: 重新抓取目前股價
+        if st.session_state.port:
             for code, d in list(st.session_state.port.items()):
-                try:
-                    if len(p_list) == 1: now_p = float(curr_data.iloc[-1])
-                    else: now_p = float(curr_data[f"{code}.TW" if ".TW" not in code else code].iloc[-1])
-                except: now_p = d['c'] / (d['q'] * 1000)
-
+                now_p = float(yf.download(f"{code}.TW", period="1d", progress=False)['Close'].iloc[-1])
                 profit = (now_p * d['q'] * 1000) - d['c']
-                color = "profit-up" if profit < 0 else "profit-down" # 虧損紅/獲利綠
+                color = "profit-up" if profit > 0 else "profit-down"
                 
                 st.markdown(f"""
                 <div class='stock-card'>
-                    <div style='display:flex; justify-content:space-between;'>
-                        <b>{code} ({d['q']}張)</b>
-                        <span class='{color}'>{'▼' if profit<0 else '▲'} ${abs(profit):,.0f}</span>
-                    </div>
-                    <p style='margin:0; opacity:0.8;'>現價: {now_p:.2f} | 成本: {d['c']/(d['q']*1000):.2f}</p>
+                    <b>{code}</b> ({d['q']} 張) | 當前損益: <span class='{color}'>${profit:,.0f}</span>
+                    <p>成本: {d['c']/(d['q']*1000):.2f} | 現價: {now_p:.2f}</p>
                 </div>""", unsafe_allow_html=True)
                 
-                if st.button(f"賣出 {code}", key=f"s_{code}"):
+                if st.button(f"賣出 {code}", key=f"sell_{code}"):
                     st.session_state.bal += (d['q'] * 1000 * now_p)
                     del st.session_state.port[code]
                     supabase.table("users").update({"balance": st.session_state.bal, "portfolio": st.session_state.port}).eq("username", st.session_state.user).execute()
                     st.rerun()
+        else:
+            st.info("目前庫存空空如也，快去雷達找飆股吧！")
