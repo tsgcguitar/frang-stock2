@@ -11,17 +11,56 @@ st.set_page_config(page_title="從從容容飆股王", layout="wide")
 
 # 藍色高科技風格 CSS
 st.markdown("""
-    <style>
-    .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
-    h1, h2, h3, .stTabs [aria-selected="true"] { color: #00E5FF !important; text-shadow: 0 0 8px rgba(0, 229, 255, 0.4); }
-    .stock-card {
-        background: rgba(0, 30, 60, 0.75); border: 1px solid #00B0FF;
-        box-shadow: 0 0 15px rgba(0, 176, 255, 0.3) inset; padding: 20px; border-radius: 12px; margin-bottom: 20px;
-    }
-    .stButton>button { background: linear-gradient(to bottom, #00B0FF, #0081CB); color: white !important; border-radius: 8px; }
-    .profit-up { color: #FF3333 !important; } .profit-down { color: #00FF66 !important; }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+.stApp {
+    background: linear-gradient(to bottom right, #001233, #000814);
+    color: #E0F7FA;
+}
+
+/* 🔑 全域文字強制亮色 */
+.stMarkdown, .stText, p, li, span, label, div {
+    color: #E6F7FF !important;
+}
+
+/* 標題 */
+h1, h2, h3 {
+    color: #00E5FF !important;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+}
+
+/* Tabs */
+.stTabs [aria-selected="true"] {
+    color: #00E5FF !important;
+}
+.stTabs [aria-selected="false"] {
+    color: #B3E5FC !important;
+}
+
+/* 卡片 */
+.stock-card {
+    background: rgba(0, 30, 60, 0.75);
+    border: 1px solid #00B0FF;
+    box-shadow: 0 0 15px rgba(0, 176, 255, 0.3) inset;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    color: #E6F7FF;
+}
+
+/* 按鈕 */
+.stButton>button {
+    background: linear-gradient(to bottom, #00B0FF, #0081CB);
+    color: white !important;
+    border-radius: 8px;
+}
+
+/* 漲跌顏色（台股慣例） */
+.profit-up { color: #FF5252 !important; }
+.profit-down { color: #00E676 !important; }
+
+</style>
+""", unsafe_allow_html=True)
+
 
 SUPABASE_URL = "https://jhphmcbqtprfhvdkklps.supabase.co"
 SUPABASE_KEY = "sb_publishable_qfe3kH2yYYXN_PI7KNCZMg_UJmcvJWE"
@@ -187,3 +226,4 @@ else:
                     st.rerun()
         else:
             st.info("目前庫存空空如也，快去雷達找飆股吧！")
+
