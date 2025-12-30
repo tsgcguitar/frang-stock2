@@ -177,19 +177,30 @@ else:
                 
                 b_col1, b_col2 = st.columns([1, 1])
                 num = b_col1.number_input(f"張數 ({s['代碼']})", 1, 50, key=f"n_{s['代碼']}")
-                if b_col2.button(f"買進 {s['代碼']}", key=f"b_{s['代碼']}"):
-                    cost = num * 1000 * s['現價']
-                    if st.session_state.bal >= cost:
-                        st.session_state.bal -= cost
-                        # 更新持股
-                        p = st.session_state.port
-                        p[s['代碼']] = p.get(s['代碼'], {'q':0, 'c':0})
-                        p[s['代['代碼']]['q'] += num
-                        p[s['代碼']]['c'] += cost
-                        save_user_state(st.session_state.user, st.session_state.bal, p)
-                        st.toast("雲端同步買入成功！")
-                        time.sleep(0.5); st.rerun()
-                    else: st.error("餘額不足")
+              # --- 修正後的買入邏輯區塊 ---
+if b_col2.button(f"買進 {s['代碼']}", key=f"b_{s['代碼']}"):
+    cost = num * 1000 * s['現價']
+    if st.session_state.bal >= cost:
+        st.session_state.bal -= cost
+        
+        # 取得目前的持股字典
+        p = st.session_state.port
+        
+        # 確保該代碼已初始化
+        if s['代碼'] not in p:
+            p[s['代碼']] = {'q': 0, 'c': 0}
+        
+        # 正確更新數量與成本 (修正原本語法錯誤的地方)
+        p[s['代碼']]['q'] += num
+        p[s['代碼']]['c'] += cost
+        
+        # 同步回雲端 Supabase
+        save_user_state(st.session_state.user, st.session_state.bal, p)
+        st.toast(f"✅ 已成功買入 {num} 張 {s['代碼']}！")
+        time.sleep(0.5)
+        st.rerun()
+    else:
+        st.error("❌ 餘額不足")
 
     with t2:
         st.subheader("📊 即時損益監控")
@@ -235,3 +246,4 @@ else:
             if st.button("⚠️ 重置雲端帳戶"):
                 save_user_state(st.session_state.user, 1000000.0, {})
                 st.rerun()
+
