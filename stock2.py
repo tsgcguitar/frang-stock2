@@ -6,26 +6,37 @@ import time
 import twstock
 from supabase import create_client, Client
 
-# --- 1. 初始化與 UI 樣式強化 (保持不動) ---
+# --- 1. 初始化與 UI 樣式強化 ---
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 
 st.markdown("""
 <style>
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
+/* 全域文字顏色加強 */
 .stMarkdown, .stText, p, li, span, label, div { color: #FFFFFF !important; font-weight: 500; }
 h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); }
+
+/* 卡片與區塊 */
 .stock-card {
     background: rgba(0, 40, 80, 0.85);
     border: 2px solid #00B0FF;
     box-shadow: 0 0 20px rgba(0, 176, 255, 0.4);
     padding: 25px; border-radius: 15px; margin-bottom: 25px;
 }
+.buy-zone {
+    background: rgba(0, 229, 255, 0.1);
+    padding: 15px; border-radius: 10px; margin-top: 10px;
+}
+
+/* 按鈕文字強化：強制深色背景配亮色文字或亮色背景配深色文字 */
 .stButton>button {
     background: linear-gradient(to bottom, #00E5FF, #00B0FF);
-    color: #001233 !important;
+    color: #001233 !important; /* 加深按鈕文字 */
     font-weight: 800 !important;
     border-radius: 8px; width: 100%; height: 50px;
 }
+
+/* 漲跌標籤 */
 .profit-up { color: #FF3D00 !important; font-size: 1.2em; font-weight: 900; }
 .profit-down { color: #00E676 !important; font-size: 1.2em; font-weight: 900; }
 .price-tag { color: #FFFF00 !important; font-size: 1.1em; }
@@ -40,7 +51,8 @@ try:
 except:
     st.error("⚠️ 雲端資料庫連線中斷")
 
-# --- 2. 核心功能函數 (原本掃描邏輯不動) ---
+# --- 2. 核心功能函數 ---
+
 @st.cache_data(ttl=86400)
 def get_all_tickers():
     mapping = {}
@@ -73,6 +85,7 @@ def run_full_scan(tickers_map):
                     ma60_p = df['Close'].rolling(60).mean().iloc[-2]
                     v20_a = df['Volume'].rolling(20).mean().iloc[-1]
                     
+                    # 邏輯：5,10,20MA糾結，60MA向上，今日爆量突破
                     if (max([ma5,ma10,ma20])-min([ma5,ma10,ma20]))/min([ma5,ma10,ma20]) <= 0.03 and \
                        ma60 > ma60_p and c > max([ma5,ma10,ma20,ma60]) and \
                        (c - ma5)/ma5 <= 0.05 and v > (v20_a * 1.5) and v >= 1000000:
@@ -81,11 +94,12 @@ def run_full_scan(tickers_map):
                             "現價": round(c, 2), "成交量": int(v // 1000), "停損": round(ma60, 2), "停利": round(c*1.15, 2)
                         })
                 except: continue
+            time.sleep(0.3)
         except: continue
     progress.empty(); status.empty()
     return qualified
 
-# --- 3. 登入/訂閱介面 (保持不動) ---
+# --- 3. 登入/訂閱介面 ---
 if 'login' not in st.session_state: st.session_state.login = False
 
 if not st.session_state.login:
@@ -114,7 +128,7 @@ else:
         if st.button("🔍 開始 1700 檔全量掃描"):
             res = run_full_scan(get_all_tickers())
             st.session_state.total_found = len(res)
-            st.session_state.scan_res = res # 改成搜尋到就全吐
+            st.session_state.scan_res = random.sample(res, min(5, len(res)))
         
         if 'scan_res' in st.session_state:
             st.success(f"🎯 掃描完成！共找到 {st.session_state.total_found} 檔符合條件標的")
@@ -135,7 +149,7 @@ else:
                         if st.button(f"確認買進 {qty} 張", key=f"btn_{s['代碼']}"):
                             if st.session_state.bal >= total_cost:
                                 st.session_state.bal -= total_cost
-                                tk = s['全代碼']
+                                tk = s['全代碼'] # 存入完整的 .TW 或 .TWO
                                 st.session_state.port[tk] = st.session_state.port.get(tk, {'q':0, 'c':0})
                                 st.session_state.port[tk]['q'] += qty
                                 st.session_state.port[tk]['c'] += total_cost
@@ -144,29 +158,13 @@ else:
                             else: st.error("餘額不足")
 
     with tab2:
-        # 問題 2 調整：顯示總損益與刷新功能
-        total_unrealized_profit = 0
-        
-        col_bal, col_reset = st.columns([3, 1])
-        col_bal.markdown(f"### 💰 帳戶餘額: `${st.session_state.bal:,.0f}`")
-        if col_reset.button("⚠️ 重置 100 萬"):
-            st.session_state.bal = 1000000
-            st.session_state.port = {}
-            supabase.table("users").update({"balance": 1000000, "portfolio": {}}).eq("username", st.session_state.user).execute()
-            st.rerun()
-
-        if st.button("🔄 刷新即時損益金額"):
-            st.rerun()
-
+        st.markdown(f"### 💰 帳戶餘額: `${st.session_state.bal:,.0f}`")
         if st.session_state.port:
             for tk, d in list(st.session_state.port.items()):
                 try:
-                    # 問題 1 調整：改用 fast_info 獲取最新價格以減少延遲
-                    ticker_obj = yf.Ticker(tk)
-                    now_p = ticker_obj.fast_info['last_price']
-                    
+                    df_now = yf.download(tk, period="1d", progress=False)
+                    now_p = float(df_now['Close'].iloc[-1])
                     profit = (now_p * d['q'] * 1000) - d['c']
-                    total_unrealized_profit += profit
                     color = "profit-up" if profit >= 0 else "profit-down"
                     
                     st.markdown(f"""
@@ -189,10 +187,4 @@ else:
                             supabase.table("users").update({"balance": st.session_state.bal, "portfolio": st.session_state.port}).eq("username", st.session_state.user).execute()
                             st.rerun()
                 except: st.warning(f"無法取得 {tk} 報價，請稍後刷新")
-            
-            # 顯示總損益
-            st.divider()
-            sum_color = "profit-up" if total_unrealized_profit >= 0 else "profit-down"
-            st.markdown(f"### 📈 總未實現損益: <span class='{sum_color}'>${total_unrealized_profit:,.0f}</span>", unsafe_allow_html=True)
-        else:
-            st.info("目前庫存空空如也")
+        else: st.info("目前庫存空空如也")
