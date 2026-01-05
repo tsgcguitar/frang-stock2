@@ -12,7 +12,7 @@ st.markdown("""
 <style>
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
 .stMarkdown, .stText, p, li, span, label, div { color: #FFFFFF !important; font-weight: 500; }
-h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); }
+h1, h2, h3 { color: #FFFFFF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); }
 .stock-card {
     background: rgba(0, 40, 80, 0.85);
     border: 2px solid #00B0FF;
@@ -203,3 +203,4 @@ else:
             st.table(filtered_df.sort_values(by='date', ascending=False))
         else:
             st.info("尚無歷史成交紀錄")
+
