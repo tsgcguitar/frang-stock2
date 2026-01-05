@@ -96,10 +96,10 @@ def run_full_scan(tickers_map):
                     
                     if (max([ma5,ma10,ma20])-min([ma5,ma10,ma20]))/min([ma5,ma10,ma20]) <= 0.03 and \
                        ma60 > ma60_p and c > max([ma5,ma10,ma20,ma60]) and \
-                       (c - ma5)/ma5 <= 0.05 and v > (v20_a * 1.5) and v >= 1000000:
+                       (c - ma5)/ma5 <= 0.05 and v > (v20_a * 1.5) and v >= 2000000:
                         qualified.append({
                             "代碼": t.split('.')[0], "全代碼": t, "產業": tickers_map.get(t),
-                            "現價": round(c, 2), "成交量": int(v // 1000), "停損": round(ma60, 2), "停利": round(c*1.15, 2)
+                            "現價": round(c, 2), "成交量": int(v // 2000), "停損": round(ma60, 2), "停利": round(c*1.2, 2)
                         })
                 except: continue
         except: continue
@@ -232,7 +232,7 @@ else:
                     if 'stop_loss' in d and now_p <= d['stop_loss']:
                         st.error(f"⚠️ 股票代號 \"{stock_id}\" 已達系統停損點位，建議停損")
                     if profit_rate >= 15:
-                        st.warning(f"🎊 股票代號 \"{stock_id}\" 已賺超過 15% 建議觀察並停利")
+                        st.warning(f"🎊 股票代號 \"{stock_id}\" 已賺超過 20% 建議觀察並停利")
 
                     color = "profit-up" if profit >= 0 else "profit-down"
                     st.markdown(f"""
