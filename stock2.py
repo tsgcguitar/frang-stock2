@@ -141,7 +141,7 @@ else:
     tab1, tab2, tab3 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉", "📊 歷史損益"])
     
     with tab1:
-        if st.button("🔍 開始 1700 檔全量掃描"):
+        if st.button("🔍 開始 1800 檔全量掃描"):
             res = run_full_scan(get_all_tickers())
             st.session_state.total_found = len(res); st.session_state.scan_res = res
         if 'scan_res' in st.session_state:
@@ -227,3 +227,4 @@ else:
             st.table(display_df.sort_values(by='date', ascending=False))
         else:
             st.info("尚無歷史成交紀錄")
+
