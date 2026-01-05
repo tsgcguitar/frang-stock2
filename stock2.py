@@ -4,9 +4,10 @@ import pandas as pd
 import random
 import time
 import twstock
+from datetime import datetime
 from supabase import create_client, Client
 
-# --- 1. 初始化與 UI 樣式強化 (保持不動) ---
+# --- 1. 初始化與 UI 樣式強化 ---
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 
 st.markdown("""
@@ -40,7 +41,7 @@ try:
 except:
     st.error("⚠️ 雲端資料庫連線中斷")
 
-# --- 2. 核心功能函數 (原本掃描邏輯不動) ---
+# --- 2. 核心功能函數 (完全保留原始邏輯) ---
 @st.cache_data(ttl=86400)
 def get_all_tickers():
     mapping = {}
@@ -85,7 +86,7 @@ def run_full_scan(tickers_map):
     progress.empty(); status.empty()
     return qualified
 
-# --- 3. 登入/訂閱介面 (保持不動) ---
+# --- 3. 登入/註冊/訂閱介面 ---
 if 'login' not in st.session_state: st.session_state.login = False
 
 if not st.session_state.login:
@@ -96,25 +97,57 @@ if not st.session_state.login:
     with col2: st.markdown("<div class='stock-card'><h3>☀️ 年費版</h3><h1>$2,990</h1></div>", unsafe_allow_html=True)
     with st.expander("💳 顯示付款資訊"):
         st.info("🏦 永豐銀行 (807) | 帳號：148-018-00054187\n\n轉帳後截圖聯繫 Line: 811162 將於30分鐘內開通。")
-    user = st.text_input("👤 帳號")
-    pwd = st.text_input("🔑 授權碼", type="password")
-    if st.button("🚀 登入"):
-        if pwd == "STOCK2026":
-            res = supabase.table("users").select("*").eq("username", user).execute()
-            u = res.data[0] if res.data else {"username": user, "balance": 1000000, "portfolio": {}}
-            if not res.data: supabase.table("users").insert(u).execute()
-            st.session_state.update({"login":True, "user":user, "bal":u['balance'], "port":u['portfolio']})
-            st.rerun()
+    
+    user_input = st.text_input("👤 帳號 (英文/數字共4碼以上)").strip().lower() # 大小寫視為相同
+    pwd_input = st.text_input("🔑 授權碼", type="password")
+    
+    btn_login, btn_reg = st.columns(2)
+    
+    with btn_login:
+        if st.button("🚀 登入系統"):
+            if pwd_input != "STOCK2026":
+                st.error("授權碼 請聯繫Line: 811162開通")
+            else:
+                res = supabase.table("users").select("*").eq("username", user_input).execute()
+                if res.data:
+                    u = res.data[0]
+                    st.session_state.update({"login":True, "user":user_input, "bal":u['balance'], "port":u['portfolio'], "history": u.get('history', [])})
+                    st.rerun()
+                else:
+                    st.error("找不到此帳號，請先註冊")
+
+    with btn_reg:
+        if st.button("📝 註冊會員"):
+            if len(user_input) < 4:
+                st.warning("帳號格式錯誤：需要 4 碼以上英文或數字")
+            elif pwd_input != "STOCK2026":
+                st.error("授權碼 請聯繫Line: 811162開通")
+            else:
+                # 檢查重複
+                check_res = supabase.table("users").select("username").eq("username", user_input).execute()
+                if check_res.data:
+                    st.warning("已有此會員帳號")
+                else:
+                    new_user = {"username": user_input, "balance": 1000000, "portfolio": {}, "history": []}
+                    supabase.table("users").insert(new_user).execute()
+                    st.success("註冊成功！請點擊登入")
 
 # --- 4. 主程式分頁 ---
 else:
-    tab1, tab2 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉"])
+    # 增加側邊欄登出功能
+    with st.sidebar:
+        st.write(f"👤 當前用戶: **{st.session_state.user}**")
+        if st.button("🚪 登出系統"):
+            st.session_state.clear()
+            st.rerun()
+
+    tab1, tab2, tab3 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉", "📊 歷史損益"])
     
     with tab1:
         if st.button("🔍 開始 1700 檔全量掃描"):
             res = run_full_scan(get_all_tickers())
             st.session_state.total_found = len(res)
-            st.session_state.scan_res = res # 改成搜尋到就全吐
+            st.session_state.scan_res = res 
         
         if 'scan_res' in st.session_state:
             st.success(f"🎯 掃描完成！共找到 {st.session_state.total_found} 檔符合條件標的")
@@ -144,15 +177,14 @@ else:
                             else: st.error("餘額不足")
 
     with tab2:
-        # 問題 2 調整：顯示總損益與刷新功能
         total_unrealized_profit = 0
-        
         col_bal, col_reset = st.columns([3, 1])
         col_bal.markdown(f"### 💰 帳戶餘額: `${st.session_state.bal:,.0f}`")
         if col_reset.button("⚠️ 重置 100 萬"):
             st.session_state.bal = 1000000
             st.session_state.port = {}
-            supabase.table("users").update({"balance": 1000000, "portfolio": {}}).eq("username", st.session_state.user).execute()
+            st.session_state.history = []
+            supabase.table("users").update({"balance": 1000000, "portfolio": {}, "history": []}).eq("username", st.session_state.user).execute()
             st.rerun()
 
         if st.button("🔄 刷新即時損益金額"):
@@ -161,18 +193,27 @@ else:
         if st.session_state.port:
             for tk, d in list(st.session_state.port.items()):
                 try:
-                    # 問題 1 調整：改用 fast_info 獲取最新價格以減少延遲
                     ticker_obj = yf.Ticker(tk)
-                    now_p = ticker_obj.fast_info['last_price']
+                    # 獲取最新價格與 60MA 進行停損比對
+                    hist = ticker_obj.history(period="65d")
+                    now_p = hist['Close'].iloc[-1]
+                    ma60_val = hist['Close'].rolling(60).mean().iloc[-1]
                     
                     profit = (now_p * d['q'] * 1000) - d['c']
+                    profit_pct = (profit / d['c']) * 100
                     total_unrealized_profit += profit
-                    color = "profit-up" if profit >= 0 else "profit-down"
                     
+                    # 停損與停利通知
+                    if now_p <= ma60_val:
+                        st.error(f"🚨 股票代號 \"{tk.split('.')[0]}\" 已達系統停損點位，建議停損")
+                    if profit_pct >= 15:
+                        st.warning(f"🎊 股票代號 \"{tk.split('.')[0]}\" 已賺超過 15% 建議觀察並停利")
+
+                    color = "profit-up" if profit >= 0 else "profit-down"
                     st.markdown(f"""
                     <div class='stock-card'>
                         <h4>{tk.split('.')[0]} ({d['q']} 張)</h4>
-                        <p>損益金額: <span class='{color}'>${profit:,.0f}</span> ({ (profit/d['c'])*100 :.2f}%)</p>
+                        <p>損益金額: <span class='{color}'>${profit:,.0f}</span> ({profit_pct:.2f}%)</p>
                         <p>成本價: {d['c']/(d['q']*1000):.2f} | 現價: {now_p:.2f}</p>
                     </div>""", unsafe_allow_html=True)
                     
@@ -181,19 +222,53 @@ else:
                         est_back = s_qty * 1000 * now_p
                         st.markdown(f"**預計入帳金額： `${est_back:,.0f}`**")
                         if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
-                            st.session_state.bal += est_back
+                            # 計算已實現損益並存入歷史
                             cost_of_sold = (s_qty / d['q']) * d['c']
+                            realized_profit = est_back - cost_of_sold
+                            new_record = {
+                                "date": datetime.now().strftime("%Y-%m-%d"),
+                                "tk": tk.split('.')[0],
+                                "profit": realized_profit
+                            }
+                            st.session_state.history.append(new_record)
+                            
+                            st.session_state.bal += est_back
                             st.session_state.port[tk]['q'] -= s_qty
                             st.session_state.port[tk]['c'] -= cost_of_sold
                             if st.session_state.port[tk]['q'] <= 0: del st.session_state.port[tk]
-                            supabase.table("users").update({"balance": st.session_state.bal, "portfolio": st.session_state.port}).eq("username", st.session_state.user).execute()
+                            
+                            # 更新資料庫 (包含歷史損益)
+                            supabase.table("users").update({
+                                "balance": st.session_state.bal, 
+                                "portfolio": st.session_state.port,
+                                "history": st.session_state.history
+                            }).eq("username", st.session_state.user).execute()
                             st.rerun()
                 except: st.warning(f"無法取得 {tk} 報價，請稍後刷新")
             
-            # 顯示總損益
             st.divider()
             sum_color = "profit-up" if total_unrealized_profit >= 0 else "profit-down"
             st.markdown(f"### 📈 總未實現損益: <span class='{sum_color}'>${total_unrealized_profit:,.0f}</span>", unsafe_allow_html=True)
         else:
             st.info("目前庫存空空如也")
 
+    with tab3:
+        st.markdown("### 📊 已實現損益查詢")
+        if st.session_state.history:
+            df_hist = pd.DataFrame(st.session_state.history)
+            df_hist['date'] = pd.to_datetime(df_hist['date'])
+            
+            # 月份篩選選單
+            months = sorted(df_hist['date'].dt.strftime('%Y-%m').unique().tolist(), reverse=True)
+            selected_month = st.selectbox("📅 選擇查詢月份", ["全部顯示"] + months)
+            
+            if selected_month == "全部顯示":
+                filtered_df = df_hist
+            else:
+                filtered_df = df_hist[df_hist['date'].dt.strftime('%Y-%m') == selected_month]
+            
+            total_history_profit = filtered_df['profit'].sum()
+            st.markdown(f"#### 💰 累計已實現盈虧: `${total_history_profit:,.0f}`")
+            st.table(filtered_df.sort_values(by='date', ascending=False))
+        else:
+            st.info("尚無歷史成交紀錄")
