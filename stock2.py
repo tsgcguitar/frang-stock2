@@ -33,6 +33,23 @@ h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 
 .logout-btn>button {
     background: #FF5252 !important; color: white !important; height: 35px !important;
 }
+
+/* 修正 1: 下拉選單顏色改成深藍色 */
+div[data-baseweb="select"] > div {
+    background-color: #001233 !important;
+    color: white !important;
+    border: 1px solid #00B0FF !important;
+}
+div[role="listbox"] {
+    background-color: #001233 !important;
+}
+div[role="option"] {
+    background-color: #001233 !important;
+    color: white !important;
+}
+div[role="option"]:hover {
+    background-color: #00B0FF !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -101,7 +118,6 @@ if not st.session_state.login:
     with st.expander("💳 顯示付款資訊"):
         st.info("🏦 永豐銀行 (807) | 帳號：148-018-00054187\n\n轉帳後截圖聯繫 Line: 811162 將於30分鐘內開通。")
     
-    # 帳號輸入轉小寫處理，達到大小寫視為相同
     user = st.text_input("👤 帳號 (英數共4碼以上)").strip().lower()
     pwd = st.text_input("🔑 授權碼", type="password")
     
@@ -140,7 +156,6 @@ if not st.session_state.login:
 
 # --- 4. 主程式分頁 ---
 else:
-    # 頂部狀態列與登出按鈕
     stat_col1, stat_col2 = st.columns([5, 1])
     stat_col1.markdown(f"👤 您好, **{st.session_state.user}** | 💰 餘額: `${st.session_state.bal:,.0f}`")
     with stat_col2:
@@ -151,7 +166,7 @@ else:
     tab1, tab2, tab3 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉", "📜 歷史損益"])
     
     with tab1:
-        if st.button("🔍 開始 1700 檔全量掃描"):
+        if st.button("🔍 開始 1800 檔全量掃描"):
             res = run_full_scan(get_all_tickers())
             st.session_state.total_found = len(res)
             st.session_state.scan_res = res 
@@ -190,7 +205,7 @@ else:
         if col_reset.button("⚠️ 重置 100 萬"):
             st.session_state.bal = 1000000
             st.session_state.port = {}
-            st.session_state.history = [] # 重置時清空歷史
+            st.session_state.history = []
             supabase.table("users").update({"balance": 1000000, "portfolio": {}, "history": []}).eq("username", st.session_state.user).execute()
             st.rerun()
 
@@ -200,16 +215,19 @@ else:
         if st.session_state.port:
             for tk, d in list(st.session_state.port.items()):
                 try:
+                    # 修正 2: 優化報價抓取，防止點擊賣出時發生閃退
                     ticker_obj = yf.Ticker(tk)
-                    now_p = ticker_obj.fast_info['last_price']
+                    try:
+                        now_p = ticker_obj.fast_info['last_price']
+                    except:
+                        # 如果 fast_info 失敗，嘗試抓取最近一筆歷史數據
+                        now_p = ticker_obj.history(period="1d")['Close'].iloc[-1]
                     
-                    # 損益計算
                     cost_per_share = d['c'] / (d['q'] * 1000)
                     profit = (now_p * d['q'] * 1000) - d['c']
                     profit_rate = (profit / d['c']) * 100
                     total_unrealized_profit += profit
                     
-                    # 停損停利提醒
                     stock_id = tk.split('.')[0]
                     if 'stop_loss' in d and now_p <= d['stop_loss']:
                         st.error(f"⚠️ 股票代號 \"{stock_id}\" 已達系統停損點位，建議停損")
@@ -228,12 +246,11 @@ else:
                         s_qty = st.number_input("賣出張數", min_value=1, max_value=d['q'], value=d['q'], key=f"sq_{tk}")
                         est_back = s_qty * 1000 * now_p
                         st.markdown(f"**預計入帳金額： `${est_back:,.0f}`**")
+                        # 修正 2：在按鈕點擊時直接帶入預算好的 now_p，不重新請求
                         if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
-                            # 計算此筆已實現損益
                             cost_of_sold = (s_qty / d['q']) * d['c']
                             realized_p = est_back - cost_of_sold
                             
-                            # 寫入歷史紀錄
                             history_entry = {
                                 "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                                 "month": datetime.now().strftime("%Y-%m"),
@@ -242,8 +259,6 @@ else:
                                 "profit": realized_p
                             }
                             st.session_state.history.append(history_entry)
-                            
-                            # 更新帳戶狀態
                             st.session_state.bal += est_back
                             st.session_state.port[tk]['q'] -= s_qty
                             st.session_state.port[tk]['c'] -= cost_of_sold
@@ -254,9 +269,11 @@ else:
                                 "portfolio": st.session_state.port,
                                 "history": st.session_state.history
                             }).eq("username", st.session_state.user).execute()
-                            st.success("賣出成功！"); st.rerun()
-                except: st.warning(f"無法取得 {tk} 報價，請稍後刷新")
-            
+                            st.success("賣出成功！")
+                            st.rerun()
+                except Exception as e:
+                    st.warning(f"正在更新 {tk} 數據中，請稍後...")
+
             st.divider()
             sum_color = "profit-up" if total_unrealized_profit >= 0 else "profit-down"
             st.markdown(f"### 📈 總未實現損益: <span class='{sum_color}'>${total_unrealized_profit:,.0f}</span>", unsafe_allow_html=True)
@@ -267,18 +284,13 @@ else:
         st.markdown("### 📊 已實現損益歷史")
         if st.session_state.history:
             df_hist = pd.DataFrame(st.session_state.history)
-            
-            # 月份篩選器
             month_list = ["全部"] + sorted(list(df_hist['month'].unique()), reverse=True)
             sel_month = st.selectbox("📅 篩選月份", month_list)
             
             view_df = df_hist if sel_month == "全部" else df_hist[df_hist['month'] == sel_month]
-            
-            # 總結算顯示
             total_realized = view_df['profit'].sum()
             summary_color = "#FF3D00" if total_realized >= 0 else "#00E676"
             st.markdown(f"#### 💰 該期間總已實現損益: <span style='color:{summary_color}'>${total_realized:,.0f}</span>", unsafe_allow_html=True)
-            
             st.dataframe(view_df[['date', 'stock', 'qty', 'profit']].sort_values('date', ascending=False), use_container_width=True)
         else:
             st.info("尚無歷史成交紀錄")
