@@ -6,7 +6,7 @@ import time
 import twstock
 from supabase import create_client, Client
 
-# --- 1. 初始化與 UI 樣式強化 (保持不動) ---
+# --- 1. 初始化與 UI 樣式強化 ---
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 
 st.markdown("""
@@ -40,7 +40,7 @@ try:
 except:
     st.error("⚠️ 雲端資料庫連線中斷")
 
-# --- 2. 核心功能函數 (原本掃描邏輯不動) ---
+# --- 2. 核心功能函數 ---
 @st.cache_data(ttl=86400)
 def get_all_tickers():
     mapping = {}
@@ -85,7 +85,7 @@ def run_full_scan(tickers_map):
     progress.empty(); status.empty()
     return qualified
 
-# --- 3. 登入/訂閱介面 (保持不動) ---
+# --- 3. 登入/訂閱介面 ---
 if 'login' not in st.session_state: st.session_state.login = False
 
 if not st.session_state.login:
@@ -105,6 +105,9 @@ if not st.session_state.login:
             if not res.data: supabase.table("users").insert(u).execute()
             st.session_state.update({"login":True, "user":user, "bal":u['balance'], "port":u['portfolio']})
             st.rerun()
+        else:
+            # 功能 1: 授權碼錯誤提示
+            st.error("授權碼 請聯繫Line: 811162開通")
 
 # --- 4. 主程式分頁 ---
 else:
@@ -114,7 +117,7 @@ else:
         if st.button("🔍 開始 1700 檔全量掃描"):
             res = run_full_scan(get_all_tickers())
             st.session_state.total_found = len(res)
-            st.session_state.scan_res = res # 改成搜尋到就全吐
+            st.session_state.scan_res = res
         
         if 'scan_res' in st.session_state:
             st.success(f"🎯 掃描完成！共找到 {st.session_state.total_found} 檔符合條件標的")
@@ -144,7 +147,6 @@ else:
                             else: st.error("餘額不足")
 
     with tab2:
-        # 問題 2 調整：顯示總損益與刷新功能
         total_unrealized_profit = 0
         
         col_bal, col_reset = st.columns([3, 1])
@@ -161,19 +163,30 @@ else:
         if st.session_state.port:
             for tk, d in list(st.session_state.port.items()):
                 try:
-                    # 問題 1 調整：改用 fast_info 獲取最新價格以減少延遲
+                    # 獲取最新資料（包含歷史資料以計算季線 MA60）
                     ticker_obj = yf.Ticker(tk)
-                    now_p = ticker_obj.fast_info['last_price']
+                    # 為了計算 MA60，我們抓取 65 天的歷史數據
+                    hist = ticker_obj.history(period="65d")
+                    now_p = hist['Close'].iloc[-1]
+                    ma60_val = hist['Close'].rolling(60).mean().iloc[-1]
                     
                     profit = (now_p * d['q'] * 1000) - d['c']
+                    profit_pct = (profit / d['c']) * 100
                     total_unrealized_profit += profit
                     color = "profit-up" if profit >= 0 else "profit-down"
                     
+                    # 功能 2 & 3: 停損與停利警示
+                    if now_p <= ma60_val:
+                        st.error(f"⚠️ 股票代號 \"{tk.split('.')[0]}\" 已達系統停損點位，建議停損")
+                    
+                    if profit_pct >= 15:
+                        st.warning(f"🎊 股票代號 \"{tk.split('.')[0]}\" 已賺超過 15% 建議觀察並停利")
+
                     st.markdown(f"""
                     <div class='stock-card'>
                         <h4>{tk.split('.')[0]} ({d['q']} 張)</h4>
-                        <p>損益金額: <span class='{color}'>${profit:,.0f}</span> ({ (profit/d['c'])*100 :.2f}%)</p>
-                        <p>成本價: {d['c']/(d['q']*1000):.2f} | 現價: {now_p:.2f}</p>
+                        <p>損益金額: <span class='{color}'>${profit:,.0f}</span> ({profit_pct:.2f}%)</p>
+                        <p>成本價: {d['c']/(d['q']*1000):.2f} | 現價: {now_p:.2f} | 季線: {ma60_val:.2f}</p>
                     </div>""", unsafe_allow_html=True)
                     
                     with st.expander(f"💸 賣出 {tk.split('.')[0]}"):
@@ -196,4 +209,3 @@ else:
             st.markdown(f"### 📈 總未實現損益: <span class='{sum_color}'>${total_unrealized_profit:,.0f}</span>", unsafe_allow_html=True)
         else:
             st.info("目前庫存空空如也")
-
