@@ -113,7 +113,7 @@ if not st.session_state.login:
     st.title("🏹 從從容容飆股王")
     st.markdown("### 🏆 買在起漲點，不追高雷達")
     col1, col2 = st.columns(2)
-    with col1: st.markdown("<div class='stock-card'><h3>🌙 月租版</h3><h1>$299</h1></div>", unsafe_allow_html=True)
+    with col1: st.markdown("<div class='stock-card'><h3>🌙 月租版</h3><h1>$399</h1></div>", unsafe_allow_html=True)
     with col2: st.markdown("<div class='stock-card'><h3>☀️ 年費版</h3><h1>$2,990</h1></div>", unsafe_allow_html=True)
     with st.expander("💳 顯示付款資訊"):
         st.info("🏦 永豐銀行 (807) | 帳號：148-018-00054187\n\n轉帳後截圖聯繫 Line: 811162 將於30分鐘內開通。")
@@ -294,3 +294,4 @@ else:
             st.dataframe(view_df[['date', 'stock', 'qty', 'profit']].sort_values('date', ascending=False), use_container_width=True)
         else:
             st.info("尚無歷史成交紀錄")
+
