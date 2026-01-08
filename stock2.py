@@ -34,21 +34,31 @@ h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 
     background: #FF5252 !important; color: white !important; height: 35px !important;
 }
 
-/* 修正 1: 下拉選單顏色改成深藍色 */
+/* 1. 尚未點開時：框框本體的顏色 */
 div[data-baseweb="select"] > div {
     background-color: #001233 !important;
-    color: white !important;
+    color: #00E5FF !important; /* 框內文字用亮青色更顯眼 */
     border: 1px solid #00B0FF !important;
 }
+
+/* 2. 點開後：整個下拉清單的背景 */
 div[role="listbox"] {
-    background-color: #001233 !important;
+    background-color: #000814 !important; /* 極深藍色背景 */
+    border: 1px solid #00B0FF !important;
 }
+
+/* 3. 點開後：每一行選項的文字與背景 */
 div[role="option"] {
-    background-color: #000000 !important;
-    color: white !important;
+    background-color: transparent !important; /* 背景透明，顯示下層 listbox 的顏色 */
+    color: #FFFFFF !important; /* 正常的選項字體設為純白色 */
+    padding: 10px !important;
 }
-div[role="option"]:hover {
-    background-color: #00B0FF !important;
+
+/* 4. 滑鼠移上去或選中時：產生強力反差 */
+div[role="option"]:hover, div[role="option"][aria-selected="true"] {
+    background-color: #00E5FF !important; /* 變成亮青色背景 */
+    color: #000000 !important; /* 變成「黑色」字體，這樣絕對看得清楚 */
+    font-weight: bold !important;
 }
 </style>
 """, unsafe_allow_html=True)
