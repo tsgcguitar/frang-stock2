@@ -44,7 +44,7 @@ div[role="listbox"] {
     background-color: #001233 !important;
 }
 div[role="option"] {
-    background-color: #001233 !important;
+    background-color: #000000 !important;
     color: white !important;
 }
 div[role="option"]:hover {
