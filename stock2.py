@@ -64,7 +64,13 @@ div[data-testid="stElementToolbar"] button:hover {
     background-color: #00E5FF !important;
     color: #001233 !important;
 }
-
+/* 1. 修正表格篩選選單 (Filter Menu) 與 搜尋框 */
+/* 這是針對點擊表格欄位後跳出的篩選視窗 */
+div[data-testid="stDataFrameResizer"] + div, 
+div[data-baseweb="popover"] {
+    background-color: #001233 !important;
+    border: 1px solid #00E5FF !important;
+}
 /* 針對 DataFrame 內建工具欄的特定修正 */
 [data-testid="stDataFrameToolbar"] {
     background-color: transparent !important;
