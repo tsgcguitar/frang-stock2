@@ -12,106 +12,69 @@ st.set_page_config(page_title="從從容容飆股王", layout="wide")
 
 st.markdown("""
 <style>
+/* 1. 全域背景與文字基礎 */
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
 .stMarkdown, .stText, p, li, span, label, div { color: #FFFFFF !important; font-weight: 500; }
 h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); }
-.stock-card {
-    background: rgba(0, 40, 80, 0.85);
-    border: 2px solid #00B0FF;
-    box-shadow: 0 0 20px rgba(0, 176, 255, 0.4);
-    padding: 25px; border-radius: 15px; margin-bottom: 25px;
+
+/* 2. 表格標題修正：徹底禁止點擊彈出選單，僅保留顯示功能 */
+[data-testid="stDataFrameColHeader"] {
+    pointer-events: none !important; /* 讓整個標題欄無法被點擊，從根源封鎖搜尋選單 */
 }
-.stButton>button {
-    background: linear-gradient(to bottom, #00E5FF, #00B0FF);
-    color: #001233 !important;
-    font-weight: 800 !important;
-    border-radius: 8px; width: 100%; height: 50px;
-}
-.profit-up { color: #FF3D00 !important; font-size: 1.2em; font-weight: 900; }
-.profit-down { color: #00E676 !important; font-size: 1.2em; font-weight: 900; }
-.price-tag { color: #FFFF00 !important; font-size: 1.1em; }
-.logout-btn>button {
-    background: #FF5252 !important; color: white !important; height: 35px !important;
-}
-div[data-baseweb="popover"], 
-div[data-baseweb="menu"],
-div[role="listbox"] {
-    background-color: #000814 !important;
-    border: 1px solid #00B0FF !important;
-}
-div[data-baseweb="popover"] ul {
-    background-color: #000814 !important;
-}
-div[role="option"] {
-    background-color: #000814 !important;
-    color: #FFFFFF !important;
-}
-div[role="option"]:hover, 
-div[role="option"][aria-selected="true"] {
-    background-color: #00E5FF !important;
-    color: #000000 !important;
-}
-/* 2. 重點修正：隱藏表格標題篩選功能 (防止出現白色選單) */
-/* 鎖定表格標題區塊，不讓它彈出篩選框 */
 [data-testid="stDataFrameColHeader"] button {
     display: none !important;
 }
 
-/* 3. 強制修正表格右上角工具列 (下載、全螢幕等) */
+/* 3. 表格右上角工具列：修正白色區塊，設為深色風格 */
 [data-testid="stElementToolbar"] {
     background-color: #001233 !important;
     border: 1px solid #00E5FF !important;
     border-radius: 5px;
     padding: 2px;
-}
-/* 強制修正表格工具列 (右上角那塊) 的顏色 */
-div[data-testid="stDataTableDynamicUpdateCursor"] button,
-div[data-testid="stElementToolbar"] {
-    background-color: rgba(0, 40, 80, 0.9) !important; /* 深藍色背景 */
-    border: 1px solid #00E5FF !important; /* 加入青色邊框 */
-    color: #FFFFFF !important; /* 文字/圖標變白色 */
-}
-/* 強制修正右上角工具列背景 */
-[data-testid="stElementToolbar"] {
-    background-color: #001233 !important;
-    border: 1px solid #00E5FF !important;
-    border-radius: 5px;
+    right: 1rem;
 }
 [data-testid="stElementToolbar"] button {
     color: #00E5FF !important;
+    background-color: transparent !important;
 }
-
-/* 下拉選單修正 */
-div[data-baseweb="popover"], div[role="listbox"] {
-    background-color: #000814 !important;
-    border: 1px solid #00B0FF !important;
-}
-/* 修正滑鼠移上去時的顏色 */
-div[data-testid="stElementToolbar"] button:hover {
+[data-testid="stElementToolbar"] button:hover {
     background-color: #00E5FF !important;
     color: #001233 !important;
 }
-/* 1. 修正表格篩選選單 (Filter Menu) 與 搜尋框 */
-/* 這是針對點擊表格欄位後跳出的篩選視窗 */
-div[data-testid="stDataFrameResizer"] + div, 
-div[data-baseweb="popover"] {
-    background-color: #001233 !important;
-    border: 1px solid #00E5FF !important;
+
+/* 4. 下拉選單與搜尋框 (Tab 4 使用) */
+div[data-baseweb="popover"], div[role="listbox"], div[data-baseweb="menu"] {
+    background-color: #000814 !important;
+    border: 1px solid #00B0FF !important;
 }
-/* 針對 DataFrame 內建工具欄的特定修正 */
-[data-testid="stDataFrameToolbar"] {
-    background-color: transparent !important;
+div[role="option"] {
+    background-color: #000814 !important;
+    color: #FFFFFF !important;
 }
-div[data-baseweb="select"] > div:nth-child(1) {
-    background-color: #001233 !important;
+div[role="option"]:hover {
+    background-color: #00E5FF !important;
+    color: #000000 !important;
 }
 input {
     color: #00E5FF !important;
-    -webkit-text-fill-color: #00E5FF !important;
+    background-color: #001233 !important;
 }
-input::placeholder {
-    color: rgba(255, 255, 255, 0.5) !important;
+
+/* 5. 組件樣式：卡片與按鈕 */
+.stock-card {
+    background: rgba(0, 40, 80, 0.85);
+    border: 2px solid #00B0FF;
+    box-shadow: 0 0 15px rgba(0, 176, 255, 0.3);
+    padding: 20px; border-radius: 12px; margin-bottom: 20px;
 }
+.stButton>button {
+    background: linear-gradient(to bottom, #00E5FF, #00B0FF);
+    color: #001233 !important;
+    font-weight: 800 !important;
+}
+.profit-up { color: #FF3D00 !important; font-size: 1.2em; font-weight: 900; }
+.profit-down { color: #00E676 !important; font-size: 1.2em; font-weight: 900; }
+.price-tag { color: #FFFF00 !important; font-size: 1.1em; }
 </style>
 """, unsafe_allow_html=True)
 
