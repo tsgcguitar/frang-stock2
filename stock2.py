@@ -81,7 +81,6 @@ def get_all_tickers():
     for code, info in twstock.tpex.items():
         if len(code) == 4: mapping[f"{code}.TWO"] = f"{code} {getattr(info, 'name', '')} ({getattr(info, 'industry', '上櫃股')})"
     return mapping
-
 def run_full_scan(tickers_map):
     qualified = []
     status = st.empty()
@@ -91,32 +90,58 @@ def run_full_scan(tickers_map):
     
     for i in range(0, len(ticker_list), chunk_size):
         chunk = ticker_list[i : i + chunk_size]
-        status.markdown(f"📡 正在掃描: **{i}/{len(ticker_list)}** 檔")
+        status.markdown(f"📡 正在掃描 (林恩如強勢策略): **{i}/{len(ticker_list)}** 檔")
         progress.progress(min(i / len(ticker_list), 1.0))
         try:
-            data = yf.download(chunk, period="150d", group_by='ticker', progress=False, threads=True)
+            # 修改點：抓取更長的週期以計算週線 (150d -> 250d)
+            data = yf.download(chunk, period="250d", group_by='ticker', progress=False, threads=True)
             for t in chunk:
                 try:
                     df = data[t].dropna() if len(chunk) > 1 else data.dropna()
-                    if len(df) < 65: continue
+                    if len(df) < 100: continue
+                    
+                    # --- A. 增加週線判斷數據 ---
+                    # 重新取樣成週線 (W) 並計算週 20MA
+                    df_weekly = df['Close'].resample('W').last()
+                    w_ma20 = df_weekly.rolling(20).mean().iloc[-1]
+                    
+                    # 日線數據
                     c = df['Close'].iloc[-1]
+                    p_c = df['Close'].iloc[-2] # 前一日收盤價
                     v = df['Volume'].iloc[-1]
                     ma5, ma10, ma20, ma60 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1], df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(60).mean().iloc[-1]
                     ma60_p = df['Close'].rolling(60).mean().iloc[-2]
                     v20_a = df['Volume'].rolling(20).mean().iloc[-1]
                     
-                    if (max([ma5,ma10,ma20])-min([ma5,ma10,ma20]))/min([ma5,ma10,ma20]) <= 0.03 and \
-                       ma60 > ma60_p and c > max([ma5,ma10,ma20,ma60]) and \
-                       (c - ma5)/ma5 <= 0.05 and v > (v20_a * 1.5) and v >= 2000000:
+                    # 計算漲幅
+                    day_ret = (c - p_c) / p_c
+
+                    # --- 修改後的條件判斷 ---
+                    if (
+                        # 1. 基本糾結與多頭排列 (原本條件)
+                        (max([ma5,ma10,ma20])-min([ma5,ma10,ma20]))/min([ma5,ma10,ma20]) <= 0.03 and 
+                        ma60 > ma60_p and c > max([ma5,ma10,ma20,ma60]) and 
+                        
+                        # 2. 修改點 A：必須站在週 20MA 之上 (林恩如核心：長線趨勢)
+                        c > w_ma20 and 
+                        
+                        # 3. 修改點 B：爆量 2 倍 + 漲幅 > 2.5%
+                        v > (v20_a * 2.0) and 
+                        day_ret >= 0.025 and 
+                        
+                        v >= 2000000 # 基本量能過濾
+                    ):
                         
                         industry_name = tickers_map.get(t).split('(')[-1].replace(')', '')
                         
-                        # 整合邏輯：動態停損取 20MA 或 60MA 較高者
-                        dynamic_stop = max(ma20, ma60)
+                        # --- 修改點 C：停損線切換為 日 20MA (強勢股守則) ---
+                        dynamic_stop = ma20 
                         
                         qualified.append({
                             "代碼": t.split('.')[0], "全代碼": t, "產業": industry_name,
-                            "現價": round(c, 2), "成交量": int(v // 2000), "停損": round(dynamic_stop, 2), "停利": round(c*1.2, 2)
+                            "現價": round(c, 2), "成交量": int(v // 2000), 
+                            "停損": round(dynamic_stop, 2), "停利": round(c*1.2, 2),
+                            "週20MA": round(w_ma20, 2)
                         })
                 except: continue
         except: continue
