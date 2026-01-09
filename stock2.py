@@ -34,38 +34,37 @@ h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 
     background: #FF5252 !important; color: white !important; height: 35px !important;
 }
 
-/* --- 加強版下拉選單修正 --- */
+/* --- 最終強效修正版 --- */
 
-/* 1. 下拉選單整體的背景色與邊框 */
-div[data-baseweb="popover"], div[role="listbox"] {
+/* 1. 抓取所有彈出的容器層，強制背景變黑 */
+div[data-baseweb="popover"], 
+div[data-baseweb="menu"],
+div[role="listbox"] {
     background-color: #000814 !important;
     border: 1px solid #00B0FF !important;
 }
 
-/* 2. 重點：強制修改下拉選單內部的 ul/li 容器，防止出現白色底色 */
-div[role="listbox"] ul {
+/* 2. 針對容器內部的清單 (ul)，防止白色滲透 */
+div[data-baseweb="popover"] ul {
     background-color: #000814 !important;
-    padding: 0 !important;
 }
 
-/* 3. 每一個選項的原始狀態 */
+/* 3. 每一個選項的預設文字與背景 */
 div[role="option"] {
-    background-color: #000814 !important; /* 強制背景為深色 */
-    color: #FFFFFF !important; /* 文字為白色 */
-    transition: background-color 0.2s ease;
+    background-color: #000814 !important;
+    color: #FFFFFF !important;
 }
 
-/* 4. 當滑鼠移過去 (Hover) 或選中時的狀態 */
+/* 4. 關鍵：滑鼠滑過或選中時，強制反差 */
 div[role="option"]:hover, 
-div[role="option"][aria-selected="true"],
-div[role="option"]:active {
-    background-color: #00E5FF !important; /* 亮青色背景 */
-    color: #000000 !important; /* 黑色文字，絕對清晰 */
+div[role="option"][aria-selected="true"] {
+    background-color: #00E5FF !important; /* 變亮青色 */
+    color: #000000 !important; /* 文字變黑，保證清晰 */
 }
 
-/* 5. 修正下拉選單中「無結果」或「載入中」的文字顏色 */
-div[role="listbox"] div {
-    color: #00E5FF !important;
+/* 5. 修正下拉選單中「選中項目的外框」背景，避免白色塊 */
+div[data-baseweb="select"] > div:nth-child(1) {
+    background-color: #001233 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -374,4 +373,5 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的，快去搜尋股票加入吧！")
+
 
