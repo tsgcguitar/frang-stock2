@@ -224,7 +224,7 @@ else:
             elif sort_opt == "成交量 (大→小)": display_list.sort(key=lambda x: x['成交量'], reverse=True)
             elif sort_opt == "按產業": display_list.sort(key=lambda x: x['產業'])
 
-            st.success(f"🎯 掃描完成！共找到 {len(display_list)} 檔符合條件標的 (停損取 20/60MA 高者)")
+            st.success(f"🎯 掃描完成！共找到 {len(display_list)} 檔符合條件標的 (停損取 20MA)")
             
             for s in display_list:
                 with st.container():
@@ -232,7 +232,7 @@ else:
                     <div class='stock-card'>
                         <h3>{s['代碼']} - {s['產業']}</h3>
                         <p>💰 目前價格: <span class='price-tag'>${s['現價']}</span> | 📊 成交量: {s['成交量']} 張</p>
-                        <p>🛑 動態停損(20/60MA): {s['停損']} | 🎯 預設停利: {s['停利']}</p>
+                        <p>🛑 動態停損(20MA): {s['停損']} | 🎯 預設停利: {s['停利']}</p>
                         <a href='https://www.wantgoo.com/stock/{s['代碼']}' target='_blank'>📈 查看線圖</a>
                     </div>""", unsafe_allow_html=True)
                     
@@ -384,4 +384,3 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的")
-
