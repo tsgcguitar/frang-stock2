@@ -11,36 +11,32 @@ from supabase import create_client, Client
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 st.markdown("""
 <style>
-/* 1. 基礎深色背景 */
-.stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
-h1, h2, h3 { color: #00E5FF !important; }
+/* 1. 基礎背景與全域文字 */
+.stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #FFFFFF; }
+h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
 
-/* 2. 針對「白塊」選單的終極解決方案 (對應你的截圖 f1a0c1) */
-/* 這裡強制將彈出的清單背景染成深藍，文字染成亮青色 */
-div[data-baseweb="popover"] {
-    background-color: #001233 !important;
+/* 🚀 關鍵修正：將頂部分頁 (Tabs) 標籤文字強制設為白色 */
+.stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+    color: #FFFFFF !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
 }
 
+/* 2. 下拉選單 (Selectbox) 內容文字維持黑色 (解決白底看不見字的問題) */
 div[role="listbox"] {
-    background-color: #001233 !important;
-    border: 1px solid #00E5FF !important;
+    background-color: #FFFFFF !important;
 }
-
-/* 強制讓所有清單選項的文字顯示為黑色（因為你的背景可能是強制白色的 bug）*/
-/* 如果背景是白色，我們就讓字變黑；如果背景成功變深藍，我們就讓字變白 */
 div[role="option"] * {
-    color: #000000 !important; /* 先嘗試讓字變黑，確保在白底能看見 */
+    color: #000000 !important; /* 下拉選項字體變黑 */
+}
+input[role="combobox"] {
+    color: #000000 !important; /* 搜尋框內字體變黑 */
 }
 
-/* 3. 徹底封鎖表格標題點擊，防止彈出表格搜尋選單 */
+/* 3. 封鎖表格欄位標題點擊 */
 [data-testid="stDataFrameColHeader"] { pointer-events: none !important; }
 
-/* 4. 針對搜尋輸入框本身的文字顏色 (1101 台泥 那行) */
-input[role="combobox"] {
-    color: #000000 !important; /* 強制讓輸入框內的字也變黑，確保看得到 */
-}
-
-/* 5. 股票卡片樣式維持 */
+/* 4. 股票卡片與按鈕樣式 */
 .stock-card {
     background: rgba(0, 40, 80, 0.85);
     border: 2px solid #00B0FF;
@@ -50,8 +46,12 @@ input[role="combobox"] {
     background: linear-gradient(to bottom, #00E5FF, #00B0FF);
     color: #001233 !important;
     font-weight: 800 !important;
+    border-radius: 8px;
 }
-</style>""", unsafe_allow_html=True)
+.profit-up { color: #FF3D00 !important; font-size: 1.2em; font-weight: 900; }
+.profit-down { color: #00E676 !important; font-size: 1.2em; font-weight: 900; }
+</style>
+""", unsafe_allow_html=True)
 
 # Supabase 連線
 SUPABASE_URL = "https://jhphmcbqtprfhvdkklps.supabase.co"
