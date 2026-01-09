@@ -71,7 +71,21 @@ div[data-testid="stElementToolbar"] {
     border: 1px solid #00E5FF !important; /* 加入青色邊框 */
     color: #FFFFFF !important; /* 文字/圖標變白色 */
 }
+/* 強制修正右上角工具列背景 */
+[data-testid="stElementToolbar"] {
+    background-color: #001233 !important;
+    border: 1px solid #00E5FF !important;
+    border-radius: 5px;
+}
+[data-testid="stElementToolbar"] button {
+    color: #00E5FF !important;
+}
 
+/* 下拉選單修正 */
+div[data-baseweb="popover"], div[role="listbox"] {
+    background-color: #000814 !important;
+    border: 1px solid #00B0FF !important;
+}
 /* 修正滑鼠移上去時的顏色 */
 div[data-testid="stElementToolbar"] button:hover {
     background-color: #00E5FF !important;
