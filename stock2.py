@@ -28,12 +28,13 @@ a:hover {
     color: #00E5FF !important;
     text-shadow: 0 0 10px #00E5FF;
 }
-/* 💎 關鍵修正：強制讓所有元件上方的標籤 (Label) 變白色 */
-.stWidget label p, .stMarkdown p {
+/* 🌟 重點修正：強制讓所有元件上方的 Label (標籤) 變為純白色 */
+/* 包含 selectbox, multiselect, text_input 等所有標籤 */
+label[data-testid="stWidgetLabel"] p {
     color: #FFFFFF !important;
     font-size: 1.1rem !important;
     font-weight: 600 !important;
-    opacity: 1 !important; /* 防止被半透明化 */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* 增加一點陰影讓字更清晰 */
 }
 /* 🚀 關鍵修正：將頂部分頁 (Tabs) 標籤文字強制設為白色 */
 .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
