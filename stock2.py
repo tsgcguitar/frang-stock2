@@ -12,65 +12,9 @@ st.set_page_config(page_title="從從容容飆股王", layout="wide")
 
 st.markdown("""
 <style>
-/* 1. 基礎背景與文字 */
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
 .stMarkdown, .stText, p, li, span, label, div { color: #FFFFFF !important; font-weight: 500; }
 h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); }
-
-/* 2. 表格右上角工具列修正 (解決圖四白塊) */
-[data-testid="stElementToolbar"] {
-    background-color: #001233 !important;
-    border: 1px solid #00E5FF !important;
-    border-radius: 5px;
-    padding: 2px;
-}
-[data-testid="stElementToolbar"] button {
-    color: #00E5FF !important;
-    background-color: transparent !important;
-}
-[data-testid="stElementToolbar"] button:hover {
-    background-color: #00E5FF !important;
-    color: #001233 !important;
-}
-
-/* 3. 表格篩選與排序選單修正 (解決圖五白塊) */
-/* 強制捕捉彈出的篩選視窗 */
-div[data-baseweb="popover"], 
-div[role="dialog"],
-div[data-testid="stDataFrameResizer"] + div {
-    background-color: #001233 !important;
-    border: 1px solid #00B0FF !important;
-    color: #FFFFFF !important;
-}
-
-/* 篩選視窗內的輸入框 */
-div[data-baseweb="popover"] input {
-    background-color: #000814 !important;
-    color: #00E5FF !important;
-    border: 1px solid #004466 !important;
-}
-
-/* 篩選視窗內的文字與標籤 */
-div[data-baseweb="popover"] span,
-div[data-baseweb="popover"] label {
-    color: #FFFFFF !important;
-}
-
-/* 4. 下拉選單 (Selectbox) 修正 */
-div[data-baseweb="menu"], div[role="listbox"] {
-    background-color: #000814 !important;
-    border: 1px solid #00B0FF !important;
-}
-div[role="option"] {
-    background-color: #000814 !important;
-    color: #FFFFFF !important;
-}
-div[role="option"]:hover {
-    background-color: #00E5FF !important;
-    color: #000000 !important;
-}
-
-/* 5. 卡片與按鈕樣式 */
 .stock-card {
     background: rgba(0, 40, 80, 0.85);
     border: 2px solid #00B0FF;
@@ -85,8 +29,65 @@ div[role="option"]:hover {
 }
 .profit-up { color: #FF3D00 !important; font-size: 1.2em; font-weight: 900; }
 .profit-down { color: #00E676 !important; font-size: 1.2em; font-weight: 900; }
+.price-tag { color: #FFFF00 !important; font-size: 1.1em; }
+.logout-btn>button {
+    background: #FF5252 !important; color: white !important; height: 35px !important;
+}
+div[data-baseweb="popover"], 
+div[data-baseweb="menu"],
+div[role="listbox"] {
+    background-color: #000814 !important;
+    border: 1px solid #00B0FF !important;
+}
+div[data-baseweb="popover"] ul {
+    background-color: #000814 !important;
+}
+div[role="option"] {
+    background-color: #000814 !important;
+    color: #FFFFFF !important;
+}
+div[role="option"]:hover, 
+div[role="option"][aria-selected="true"] {
+    background-color: #00E5FF !important;
+    color: #000000 !important;
+}
+/* 強制修正表格工具列 (右上角那塊) 的顏色 */
+div[data-testid="stDataTableDynamicUpdateCursor"] button,
+div[data-testid="stElementToolbar"] {
+    background-color: rgba(0, 40, 80, 0.9) !important; /* 深藍色背景 */
+    border: 1px solid #00E5FF !important; /* 加入青色邊框 */
+    color: #FFFFFF !important; /* 文字/圖標變白色 */
+}
+
+/* 修正滑鼠移上去時的顏色 */
+div[data-testid="stElementToolbar"] button:hover {
+    background-color: #00E5FF !important;
+    color: #001233 !important;
+}
+/* 1. 修正表格篩選選單 (Filter Menu) 與 搜尋框 */
+/* 這是針對點擊表格欄位後跳出的篩選視窗 */
+div[data-testid="stDataFrameResizer"] + div, 
+div[data-baseweb="popover"] {
+    background-color: #001233 !important;
+    border: 1px solid #00E5FF !important;
+}
+/* 針對 DataFrame 內建工具欄的特定修正 */
+[data-testid="stDataFrameToolbar"] {
+    background-color: transparent !important;
+}
+div[data-baseweb="select"] > div:nth-child(1) {
+    background-color: #001233 !important;
+}
+input {
+    color: #00E5FF !important;
+    -webkit-text-fill-color: #00E5FF !important;
+}
+input::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
 </style>
 """, unsafe_allow_html=True)
+
 # Supabase 連線
 SUPABASE_URL = "https://jhphmcbqtprfhvdkklps.supabase.co"
 SUPABASE_KEY = "sb_publishable_qfe3kH2yYYXN_PI7KNCZMg_UJmcvJWE"
