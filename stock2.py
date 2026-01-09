@@ -15,6 +15,20 @@ st.markdown("""
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #FFFFFF; }
 h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
 
+/* 🔗 關鍵修正：將所有超連結改為白色 */
+a {
+    color: #FFFFFF !important; /* 平時顯示為白色 */
+    text-decoration: underline !important; /* 保留底線方便識別 */
+    font-weight: 500;
+    transition: 0.3s;
+}
+
+/* 當滑鼠移到超連結上時變色（亮青色） */
+a:hover {
+    color: #00E5FF !important;
+    text-shadow: 0 0 10px #00E5FF;
+}
+
 /* 🚀 關鍵修正：將頂部分頁 (Tabs) 標籤文字強制設為白色 */
 .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
     color: #FFFFFF !important;
