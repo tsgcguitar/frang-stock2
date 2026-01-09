@@ -90,7 +90,7 @@ def run_full_scan(tickers_map):
     
     for i in range(0, len(ticker_list), chunk_size):
         chunk = ticker_list[i : i + chunk_size]
-        status.markdown(f"📡 正在掃描 (林恩如強勢策略): **{i}/{len(ticker_list)}** 檔")
+        status.markdown(f"📡 正在掃描 (突破均線糾結強勢策略): **{i}/{len(ticker_list)}** 檔")
         progress.progress(min(i / len(ticker_list), 1.0))
         try:
             # 修改點：抓取更長的週期以計算週線 (150d -> 250d)
@@ -384,3 +384,4 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的")
+
