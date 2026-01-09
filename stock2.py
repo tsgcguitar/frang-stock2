@@ -11,48 +11,34 @@ from supabase import create_client, Client
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 st.markdown("""
 <style>
-/* 1. 基礎深色背景與文字 */
+/* 1. 全域背景與基礎文字 */
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
 .stMarkdown, .stText, p, li, span, label, div { color: #FFFFFF !important; font-weight: 500; }
 h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); }
 
-/* 2. 徹底封鎖表格欄位標題的點擊事件 (防止彈出搜尋選單) */
-[data-testid="stDataFrameColHeader"] {
-    pointer-events: none !important; /* 讓標題變「透明」，點不到就彈不出來 */
+/* 2. 徹底封鎖表格標題點擊，防止彈出選單 */
+[data-testid="stDataFrameColHeader"] { pointer-events: none !important; }
+
+/* 3. 修正下拉選單 (Selectbox) - 這是解決你截圖問題的關鍵 */
+/* 強制下拉選單內部的文字為黑色，確保在白底下看得見 */
+div[role="listbox"] div {
+    color: #000000 !important; 
 }
 
-/* 3. 如果選單還是不幸跳出來，強制把它染黑 (針對截圖中的白色區塊) */
-div[data-baseweb="popover"], 
-div[data-baseweb="menu"], 
-div[role="listbox"],
-div[data-testid="stTooltipHoverTarget"] + div {
-    background-color: #001233 !important;
-    background: #001233 !important;
-    border: 1px solid #00E5FF !important;
+/* 針對搜尋輸入框中的文字顏色修正 */
+input[role="combobox"] {
+    color: #FFFFFF !important; /* 輸入時的字用白色，因為輸入框背景是深色 */
 }
 
-/* 4. 針對截圖中出現的「白塊」輸入框進行強制覆蓋 */
-input {
-    background-color: #001233 !important;
-    color: #00E5FF !important;
-    border: 1px solid #00B0FF !important;
-}
-
-/* 5. 修正表格右上角工具列 (下載、全螢幕) */
+/* 4. 針對表格右上角工具列 */
 [data-testid="stElementToolbar"] {
     background-color: #001233 !important;
     border: 1px solid #00E5FF !important;
     border-radius: 5px;
 }
-[data-testid="stElementToolbar"] button {
-    color: #00E5FF !important;
-}
-[data-testid="stElementToolbar"] button:hover {
-    background-color: #00E5FF !important;
-    color: #001233 !important;
-}
+[data-testid="stElementToolbar"] button { color: #00E5FF !important; }
 
-/* 6. 其他 UI 樣式優化 */
+/* 5. 股票卡片與損益顏色 */
 .stock-card {
     background: rgba(0, 40, 80, 0.85);
     border: 2px solid #00B0FF;
@@ -65,6 +51,10 @@ input {
 }
 .profit-up { color: #FF3D00 !important; font-size: 1.2em; font-weight: 900; }
 .profit-down { color: #00E676 !important; font-size: 1.2em; font-weight: 900; }
+.price-tag { color: #FFFF00 !important; }
+
+/* 修正表格內的索引欄位顏色 (如果是白色會看不清數字) */
+[data-testid="stTable"] td { color: #FFFFFF !important; }
 </style>
 """, unsafe_allow_html=True)
 
