@@ -11,63 +11,36 @@ from supabase import create_client, Client
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 st.markdown("""
 <style>
-/* 1. 基礎深色背景與文字 */
+/* 基礎樣式維持 */
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
-.stMarkdown, .stText, p, li, span, label, div { color: #FFFFFF !important; font-weight: 500; }
-h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); }
+h1, h2, h3 { color: #00E5FF !important; }
 
-/* 2. 徹底封鎖表格欄位標題的點擊事件 (防止彈出搜尋選單) */
-[data-testid="stDataFrameColHeader"] {
-    pointer-events: none !important; /* 讓標題變「透明」，點不到就彈不出來 */
-}
-
-/* 3. 如果選單還是不幸跳出來，強制把它染黑 (針對截圖中的白色區塊) */
+/* 針對 Tab 4 的搜尋下拉選單 (解決白塊) */
 div[data-baseweb="popover"], 
-div[data-baseweb="menu"], 
-div[role="listbox"],
-div[data-testid="stTooltipHoverTarget"] + div {
+div[role="listbox"], 
+div[data-baseweb="menu"] {
     background-color: #001233 !important;
-    background: #001233 !important;
-    border: 1px solid #00E5FF !important;
+    border: 2px solid #00E5FF !important;
 }
 
-/* 4. 針對截圖中出現的「白塊」輸入框進行強制覆蓋 */
-input {
+/* 搜尋框內的文字與選項顏色 */
+div[role="option"], li[role="option"] {
     background-color: #001233 !important;
-    color: #00E5FF !important;
-    border: 1px solid #00B0FF !important;
+    color: #FFFFFF !important;
 }
 
-/* 5. 修正表格右上角工具列 (下載、全螢幕) */
-[data-testid="stElementToolbar"] {
-    background-color: #001233 !important;
-    border: 1px solid #00E5FF !important;
-    border-radius: 5px;
-}
-[data-testid="stElementToolbar"] button {
-    color: #00E5FF !important;
-}
-[data-testid="stElementToolbar"] button:hover {
+div[role="option"]:hover {
     background-color: #00E5FF !important;
     color: #001233 !important;
 }
 
-/* 6. 其他 UI 樣式優化 */
-.stock-card {
-    background: rgba(0, 40, 80, 0.85);
-    border: 2px solid #00B0FF;
-    padding: 20px; border-radius: 12px; margin-bottom: 20px;
+/* 針對右上角工具列強制顯色 */
+[data-testid="stElementToolbar"] {
+    background-color: #001233 !important;
+    border: 1px solid #00E5FF !important;
 }
-.stButton>button {
-    background: linear-gradient(to bottom, #00E5FF, #00B0FF);
-    color: #001233 !important;
-    font-weight: 800 !important;
-}
-.profit-up { color: #FF3D00 !important; font-size: 1.2em; font-weight: 900; }
-.profit-down { color: #00E676 !important; font-size: 1.2em; font-weight: 900; }
 </style>
 """, unsafe_allow_html=True)
-
 # Supabase 連線
 SUPABASE_URL = "https://jhphmcbqtprfhvdkklps.supabase.co"
 SUPABASE_KEY = "sb_publishable_qfe3kH2yYYXN_PI7KNCZMg_UJmcvJWE"
@@ -336,17 +309,35 @@ else:
         else:
             st.info("目前庫存空空如也")
 
-    with tab3:
+   with tab3:
         st.markdown("### 📊 已實現損益歷史")
         if st.session_state.history:
             df_hist = pd.DataFrame(st.session_state.history)
             month_list = ["全部"] + sorted(list(df_hist['month'].unique()), reverse=True)
             sel_month = st.selectbox("📅 篩選月份", month_list)
             view_df = df_hist if sel_month == "全部" else df_hist[df_hist['month'] == sel_month]
-            total_realized = view_df['profit'].sum()
+            
+            # 1. 處理總額與小數點（解決 -379.9994 這種數字）
+            total_realized = round(view_df['profit'].sum(), 0)
+            plot_df = view_df[['date', 'stock', 'qty', 'profit']].copy()
+            plot_df['profit'] = plot_df['profit'].round(0) 
+            
             summary_color = "#FF3D00" if total_realized >= 0 else "#00E676"
             st.markdown(f"#### 💰 該期間總已實現損益: <span style='color:{summary_color}'>${total_realized:,.0f}</span>", unsafe_allow_html=True)
-            st.dataframe(view_df[['date', 'stock', 'qty', 'profit']].sort_values('date', ascending=False), use_container_width=True)
+            
+            # 2. 終極解決方案：使用 st.column_config 並隱藏特定功能
+            st.dataframe(
+                plot_df.sort_values('date', ascending=False), 
+                use_container_width=True,
+                hide_index=True,
+                # 這裡透過定義為 TextColumn，可以鎖死篩選器不彈出來
+                column_config={
+                    "date": st.column_config.TextColumn("成交日期"),
+                    "stock": st.column_config.TextColumn("股票代號"),
+                    "qty": st.column_config.NumberColumn("張數", format="%d"),
+                    "profit": st.column_config.NumberColumn("損益金額", format="$%d")
+                }
+            )
         else:
             st.info("尚無歷史成交紀錄")
 
