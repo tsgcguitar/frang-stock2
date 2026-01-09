@@ -7,7 +7,7 @@ import twstock
 from datetime import datetime
 from supabase import create_client, Client
 
-# --- 1. 初始化與 UI 樣式強化 (保持不動) ---
+# --- 1. 初始化與 UI 樣式強化 ---
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 
 st.markdown("""
@@ -33,48 +33,33 @@ h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 
 .logout-btn>button {
     background: #FF5252 !important; color: white !important; height: 35px !important;
 }
-
-/* --- 最終強效修正版 --- */
-
-/* 1. 抓取所有彈出的容器層，強制背景變黑 */
 div[data-baseweb="popover"], 
 div[data-baseweb="menu"],
 div[role="listbox"] {
     background-color: #000814 !important;
     border: 1px solid #00B0FF !important;
 }
-
-/* 2. 針對容器內部的清單 (ul)，防止白色滲透 */
 div[data-baseweb="popover"] ul {
     background-color: #000814 !important;
 }
-
-/* 3. 每一個選項的預設文字與背景 */
 div[role="option"] {
     background-color: #000814 !important;
     color: #FFFFFF !important;
 }
-
-/* 4. 關鍵：滑鼠滑過或選中時，強制反差 */
 div[role="option"]:hover, 
 div[role="option"][aria-selected="true"] {
-    background-color: #00E5FF !important; /* 變亮青色 */
-    color: #000000 !important; /* 文字變黑，保證清晰 */
+    background-color: #00E5FF !important;
+    color: #000000 !important;
 }
-
-/* 5. 修正下拉選單中「選中項目的外框」背景，避免白色塊 */
 div[data-baseweb="select"] > div:nth-child(1) {
     background-color: #001233 !important;
 }
-/* 修改輸入框內「打字」的文字顏色 */
 input {
-    color: #00E5FF !important; /* 設定為亮青色，與主題一致 */
-    -webkit-text-fill-color: #00E5FF !important; /* 確保在 Chrome/Safari 手機版也生效 */
+    color: #00E5FF !important;
+    -webkit-text-fill-color: #00E5FF !important;
 }
-
-/* 修改輸入框的提示文字 (Placeholder) 顏色 */
 input::placeholder {
-    color: rgba(255, 255, 255, 0.5) !important; /* 半透明白色 */
+    color: rgba(255, 255, 255, 0.5) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -87,7 +72,7 @@ try:
 except:
     st.error("⚠️ 雲端資料庫連線中斷")
 
-# --- 2. 核心功能函數 (原本掃描邏輯不動) ---
+# --- 2. 核心功能函數 ---
 @st.cache_data(ttl=86400)
 def get_all_tickers():
     mapping = {}
@@ -124,12 +109,14 @@ def run_full_scan(tickers_map):
                        ma60 > ma60_p and c > max([ma5,ma10,ma20,ma60]) and \
                        (c - ma5)/ma5 <= 0.05 and v > (v20_a * 1.5) and v >= 2000000:
                         
-                        # 取得純產業名稱
                         industry_name = tickers_map.get(t).split('(')[-1].replace(')', '')
+                        
+                        # 整合邏輯：動態停損取 20MA 或 60MA 較高者
+                        dynamic_stop = max(ma20, ma60)
                         
                         qualified.append({
                             "代碼": t.split('.')[0], "全代碼": t, "產業": industry_name,
-                            "現價": round(c, 2), "成交量": int(v // 2000), "停損": round(ma60, 2), "停利": round(c*1.2, 2)
+                            "現價": round(c, 2), "成交量": int(v // 2000), "停損": round(dynamic_stop, 2), "停利": round(c*1.2, 2)
                         })
                 except: continue
         except: continue
@@ -164,7 +151,7 @@ if not st.session_state.login:
                     st.session_state.update({
                         "login": True, "user": user, "bal": u['balance'], 
                         "port": u['portfolio'], "history": u.get('history', []),
-                        "watchlist": u.get('watchlist', []) # 讀取自選清單
+                        "watchlist": u.get('watchlist', [])
                     })
                     st.rerun()
                 else:
@@ -194,7 +181,6 @@ else:
             st.session_state.clear()
             st.rerun()
 
-    # 需求 4: 新增「自選清單」Tab
     tab1, tab2, tab3, tab4 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉", "📜 歷史損益", "⭐ 自選清單"])
     
     with tab1:
@@ -203,7 +189,6 @@ else:
             st.session_state.scan_res = res 
         
         if 'scan_res' in st.session_state:
-            # 需求 1: 支持排序功能
             sort_col1, sort_col2 = st.columns([1, 2])
             with sort_col1:
                 sort_opt = st.selectbox("🔃 排序方式", ["預設", "現價 (高→低)", "現價 (低→高)", "成交量 (大→小)", "按產業"])
@@ -214,7 +199,7 @@ else:
             elif sort_opt == "成交量 (大→小)": display_list.sort(key=lambda x: x['成交量'], reverse=True)
             elif sort_opt == "按產業": display_list.sort(key=lambda x: x['產業'])
 
-            st.success(f"🎯 掃描完成！共找到 {len(display_list)} 檔符合條件標的")
+            st.success(f"🎯 掃描完成！共找到 {len(display_list)} 檔符合條件標的 (停損取 20/60MA 高者)")
             
             for s in display_list:
                 with st.container():
@@ -222,7 +207,7 @@ else:
                     <div class='stock-card'>
                         <h3>{s['代碼']} - {s['產業']}</h3>
                         <p>💰 目前價格: <span class='price-tag'>${s['現價']}</span> | 📊 成交量: {s['成交量']} 張</p>
-                        <p>🛑 停損點: {s['停損']} | 🎯 停利點: {s['停利']}</p>
+                        <p>🛑 動態停損(20/60MA): {s['停損']} | 🎯 預設停利: {s['停利']}</p>
                         <a href='https://www.wantgoo.com/stock/{s['代碼']}' target='_blank'>📈 查看線圖</a>
                     </div>""", unsafe_allow_html=True)
                     
@@ -234,7 +219,6 @@ else:
                             if st.session_state.bal >= total_cost:
                                 st.session_state.bal -= total_cost
                                 tk = s['全代碼']
-                                # 儲存時額外記錄停損利
                                 st.session_state.port[tk] = st.session_state.port.get(tk, {'q':0, 'c':0, 'stop_loss': s['停損'], 'take_profit': s['停利']})
                                 st.session_state.port[tk]['q'] += qty
                                 st.session_state.port[tk]['c'] += total_cost
@@ -260,10 +244,12 @@ else:
             for tk, d in list(st.session_state.port.items()):
                 try:
                     ticker_obj = yf.Ticker(tk)
-                    try:
-                        now_p = ticker_obj.fast_info['last_price']
-                    except:
-                        now_p = ticker_obj.history(period="1d")['Close'].iloc[-1]
+                    hist = ticker_obj.history(period="65d")
+                    now_p = hist['Close'].iloc[-1]
+                    
+                    # 計算即時的 20MA 與 60MA
+                    live_ma20 = hist['Close'].rolling(20).mean().iloc[-1]
+                    live_ma60 = hist['Close'].rolling(60).mean().iloc[-1]
                     
                     cost_per_share = d['c'] / (d['q'] * 1000)
                     profit = (now_p * d['q'] * 1000) - d['c']
@@ -271,22 +257,21 @@ else:
                     total_unrealized_profit += profit
                     
                     stock_id = tk.split('.')[0]
-                    # 需求 2 & 3: 顯示停損停利與連接線圖
-                    sl_val = d.get('stop_loss', cost_per_share * 0.9)
+                    # 停損參考買入時的設定值，但也顯示即時 MA 供參考
+                    sl_val = d.get('stop_loss', max(live_ma20, live_ma60))
                     tp_val = d.get('take_profit', cost_per_share * 1.2)
 
                     if now_p <= sl_val:
-                        st.error(f"⚠️ 股票代號 \"{stock_id}\" 已達系統停損點位 {sl_val}，建議停損")
-                    if profit_rate >= 15:
-                        st.warning(f"🎊 股票代號 \"{stock_id}\" 已達建議停利區間，請注意觀察")
-
+                        st.error(f"⚠️ 股票代號 \"{stock_id}\" 已低於停損位 {sl_val:.2f}，建議賣出")
+                    
                     color = "profit-up" if profit >= 0 else "profit-down"
                     st.markdown(f"""
                     <div class='stock-card'>
                         <h4>{stock_id} ({d['q']} 張)</h4>
                         <p>損益金額: <span class='{color}'>${profit:,.0f}</span> ({profit_rate:.2f}%)</p>
                         <p>成本價: {cost_per_share:.2f} | 現價: {now_p:.2f}</p>
-                        <p>🛑 預設停損: {sl_val:.2f} | 🎯 預設停利: {tp_val:.2f}</p>
+                        <p>📊 即時 20MA: {live_ma20:.2f} | 60MA: {live_ma60:.2f}</p>
+                        <p>🛑 買入停損: {sl_val:.2f} | 🎯 預設停利: {tp_val:.2f}</p>
                         <a href='https://www.wantgoo.com/stock/{stock_id}' target='_blank'>📈 查看即時線圖</a>
                     </div>""", unsafe_allow_html=True)
                     
@@ -297,7 +282,6 @@ else:
                         if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
                             cost_of_sold = (s_qty / d['q']) * d['c']
                             realized_p = est_back - cost_of_sold
-                            
                             history_entry = {
                                 "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                                 "month": datetime.now().strftime("%Y-%m"),
@@ -308,7 +292,6 @@ else:
                             st.session_state.port[tk]['q'] -= s_qty
                             st.session_state.port[tk]['c'] -= cost_of_sold
                             if st.session_state.port[tk]['q'] <= 0: del st.session_state.port[tk]
-                            
                             supabase.table("users").update({
                                 "balance": st.session_state.bal, 
                                 "portfolio": st.session_state.port,
@@ -316,7 +299,7 @@ else:
                             }).eq("username", st.session_state.user).execute()
                             st.success("賣出成功！"); st.rerun()
                 except Exception as e:
-                    st.warning(f"正在更新 {tk} 數據中，請稍後...")
+                    st.warning(f"正在更新 {tk} 數據中...")
 
             st.divider()
             sum_color = "profit-up" if total_unrealized_profit >= 0 else "profit-down"
@@ -330,7 +313,6 @@ else:
             df_hist = pd.DataFrame(st.session_state.history)
             month_list = ["全部"] + sorted(list(df_hist['month'].unique()), reverse=True)
             sel_month = st.selectbox("📅 篩選月份", month_list)
-            
             view_df = df_hist if sel_month == "全部" else df_hist[df_hist['month'] == sel_month]
             total_realized = view_df['profit'].sum()
             summary_color = "#FF3D00" if total_realized >= 0 else "#00E676"
@@ -339,18 +321,15 @@ else:
         else:
             st.info("尚無歷史成交紀錄")
 
-    # 需求 4: 自選清單實作
     with tab4:
         st.markdown("### ⭐ 個人追蹤清單")
         tickers_map = get_all_tickers()
-        
-        # 搜尋與新增
         c1, c2 = st.columns([3, 1])
         with c1:
             selected_stock = st.selectbox("🔍 搜尋並加入股票代號", options=list(tickers_map.keys()), 
                                         format_func=lambda x: tickers_map.get(x))
         with c2:
-            st.write(" ") # 間距
+            st.write(" ")
             if st.button("➕ 加入自選"):
                 if 'watchlist' not in st.session_state: st.session_state.watchlist = []
                 if selected_stock not in st.session_state.watchlist:
@@ -359,10 +338,7 @@ else:
                     st.rerun()
                 else:
                     st.toast("已在清單中")
-
         st.divider()
-        
-        # 顯示清單
         if st.session_state.get('watchlist'):
             for wt in st.session_state.watchlist:
                 sid = wt.split('.')[0]
@@ -382,7 +358,4 @@ else:
                         supabase.table("users").update({"watchlist": st.session_state.watchlist}).eq("username", st.session_state.user).execute()
                         st.rerun()
         else:
-            st.info("您的自選清單目前是空的，快去搜尋股票加入吧！")
-
-
-
+            st.info("您的自選清單目前是空的")
