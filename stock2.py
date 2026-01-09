@@ -36,6 +36,13 @@ label[data-testid="stWidgetLabel"] p {
     font-weight: 600 !important;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* 增加一點陰影讓字更清晰 */
 }
+/* 掃描完成的文字顏色 */
+[data-testid="stNotificationContent"] p {
+    color: #00E5FF !important; 
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+}
 /* 🚀 關鍵修正：將頂部分頁 (Tabs) 標籤文字強制設為白色 */
 .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
     color: #FFFFFF !important;
