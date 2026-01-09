@@ -9,62 +9,53 @@ from supabase import create_client, Client
 
 # --- 1. 初始化與 UI 樣式強化 ---
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
-
 st.markdown("""
 <style>
-/* 1. 全域背景與文字基礎 */
+/* 1. 基礎深色背景與文字 */
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #E0F7FA; }
 .stMarkdown, .stText, p, li, span, label, div { color: #FFFFFF !important; font-weight: 500; }
 h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); }
 
-/* 2. 表格標題修正：徹底禁止點擊彈出選單，僅保留顯示功能 */
+/* 2. 徹底封鎖表格欄位標題的點擊事件 (防止彈出搜尋選單) */
 [data-testid="stDataFrameColHeader"] {
-    pointer-events: none !important; /* 讓整個標題欄無法被點擊，從根源封鎖搜尋選單 */
-}
-[data-testid="stDataFrameColHeader"] button {
-    display: none !important;
+    pointer-events: none !important; /* 讓標題變「透明」，點不到就彈不出來 */
 }
 
-/* 3. 表格右上角工具列：修正白色區塊，設為深色風格 */
+/* 3. 如果選單還是不幸跳出來，強制把它染黑 (針對截圖中的白色區塊) */
+div[data-baseweb="popover"], 
+div[data-baseweb="menu"], 
+div[role="listbox"],
+div[data-testid="stTooltipHoverTarget"] + div {
+    background-color: #001233 !important;
+    background: #001233 !important;
+    border: 1px solid #00E5FF !important;
+}
+
+/* 4. 針對截圖中出現的「白塊」輸入框進行強制覆蓋 */
+input {
+    background-color: #001233 !important;
+    color: #00E5FF !important;
+    border: 1px solid #00B0FF !important;
+}
+
+/* 5. 修正表格右上角工具列 (下載、全螢幕) */
 [data-testid="stElementToolbar"] {
     background-color: #001233 !important;
     border: 1px solid #00E5FF !important;
     border-radius: 5px;
-    padding: 2px;
-    right: 1rem;
 }
 [data-testid="stElementToolbar"] button {
     color: #00E5FF !important;
-    background-color: transparent !important;
 }
 [data-testid="stElementToolbar"] button:hover {
     background-color: #00E5FF !important;
     color: #001233 !important;
 }
 
-/* 4. 下拉選單與搜尋框 (Tab 4 使用) */
-div[data-baseweb="popover"], div[role="listbox"], div[data-baseweb="menu"] {
-    background-color: #000814 !important;
-    border: 1px solid #00B0FF !important;
-}
-div[role="option"] {
-    background-color: #000814 !important;
-    color: #FFFFFF !important;
-}
-div[role="option"]:hover {
-    background-color: #00E5FF !important;
-    color: #000000 !important;
-}
-input {
-    color: #00E5FF !important;
-    background-color: #001233 !important;
-}
-
-/* 5. 組件樣式：卡片與按鈕 */
+/* 6. 其他 UI 樣式優化 */
 .stock-card {
     background: rgba(0, 40, 80, 0.85);
     border: 2px solid #00B0FF;
-    box-shadow: 0 0 15px rgba(0, 176, 255, 0.3);
     padding: 20px; border-radius: 12px; margin-bottom: 20px;
 }
 .stButton>button {
@@ -74,7 +65,6 @@ input {
 }
 .profit-up { color: #FF3D00 !important; font-size: 1.2em; font-weight: 900; }
 .profit-down { color: #00E676 !important; font-size: 1.2em; font-weight: 900; }
-.price-tag { color: #FFFF00 !important; font-size: 1.1em; }
 </style>
 """, unsafe_allow_html=True)
 
