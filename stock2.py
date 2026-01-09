@@ -51,6 +51,19 @@ div[role="option"][aria-selected="true"] {
     background-color: #00E5FF !important;
     color: #000000 !important;
 }
+/* 2. 重點修正：隱藏表格標題篩選功能 (防止出現白色選單) */
+/* 鎖定表格標題區塊，不讓它彈出篩選框 */
+[data-testid="stDataFrameColHeader"] button {
+    display: none !important;
+}
+
+/* 3. 強制修正表格右上角工具列 (下載、全螢幕等) */
+[data-testid="stElementToolbar"] {
+    background-color: #001233 !important;
+    border: 1px solid #00E5FF !important;
+    border-radius: 5px;
+    padding: 2px;
+}
 /* 強制修正表格工具列 (右上角那塊) 的顏色 */
 div[data-testid="stDataTableDynamicUpdateCursor"] button,
 div[data-testid="stElementToolbar"] {
