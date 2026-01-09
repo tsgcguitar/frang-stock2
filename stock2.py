@@ -51,6 +51,24 @@ div[role="option"][aria-selected="true"] {
     background-color: #00E5FF !important;
     color: #000000 !important;
 }
+/* 強制修正表格工具列 (右上角那塊) 的顏色 */
+div[data-testid="stDataTableDynamicUpdateCursor"] button,
+div[data-testid="stElementToolbar"] {
+    background-color: rgba(0, 40, 80, 0.9) !important; /* 深藍色背景 */
+    border: 1px solid #00E5FF !important; /* 加入青色邊框 */
+    color: #FFFFFF !important; /* 文字/圖標變白色 */
+}
+
+/* 修正滑鼠移上去時的顏色 */
+div[data-testid="stElementToolbar"] button:hover {
+    background-color: #00E5FF !important;
+    color: #001233 !important;
+}
+
+/* 針對 DataFrame 內建工具欄的特定修正 */
+[data-testid="stDataFrameToolbar"] {
+    background-color: transparent !important;
+}
 div[data-baseweb="select"] > div:nth-child(1) {
     background-color: #001233 !important;
 }
