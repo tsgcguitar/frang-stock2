@@ -66,6 +66,16 @@ div[role="option"][aria-selected="true"] {
 div[data-baseweb="select"] > div:nth-child(1) {
     background-color: #001233 !important;
 }
+/* 修改輸入框內「打字」的文字顏色 */
+input {
+    color: #00E5FF !important; /* 設定為亮青色，與主題一致 */
+    -webkit-text-fill-color: #00E5FF !important; /* 確保在 Chrome/Safari 手機版也生效 */
+}
+
+/* 修改輸入框的提示文字 (Placeholder) 顏色 */
+input::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important; /* 半透明白色 */
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -373,5 +383,6 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的，快去搜尋股票加入吧！")
+
 
 
