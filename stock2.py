@@ -28,7 +28,13 @@ a:hover {
     color: #00E5FF !important;
     text-shadow: 0 0 10px #00E5FF;
 }
-
+/* 💎 關鍵修正：強制讓所有元件上方的標籤 (Label) 變白色 */
+.stWidget label p, .stMarkdown p {
+    color: #FFFFFF !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    opacity: 1 !important; /* 防止被半透明化 */
+}
 /* 🚀 關鍵修正：將頂部分頁 (Tabs) 標籤文字強制設為白色 */
 .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
     color: #FFFFFF !important;
