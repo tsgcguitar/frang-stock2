@@ -14,6 +14,26 @@ st.markdown("""
 /* 1. 基礎背景與全域文字 */
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #FFFFFF; }
 h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
+/* 📦 關鍵修正：解決 st.expander (折疊面板) 的白色區塊問題 */
+[data-testid="stExpander"] {
+    background-color: rgba(0, 20, 50, 0.9) !important; /* 面板主體變深藍 */
+    border: 1px solid #00E5FF !important; /* 給它一個青色邊框 */
+    border-radius: 10px !important;
+}
+
+/* 修正折疊面板上方的「白色橫條」標題列 */
+[data-testid="stExpander"] summary {
+    background-color: #001233 !important; /* 標題背景變深藍 */
+    color: #FFFFFF !important; /* 標題文字變白色 */
+    border-radius: 10px 10px 0 0 !important;
+}
+
+/* 🔦 關鍵修正：讓面板內「淡色文字」(銀行帳號資訊) 變亮青色 */
+[data-testid="stExpander"] p, [data-testid="stNotificationContent"] p {
+    color: #00E5FF !important; /* 強制變為亮青色，確保一眼看到 */
+    font-weight: 600 !important;
+    text-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+}
 
 /* 🔗 關鍵修正：將所有超連結改為白色 */
 a {
