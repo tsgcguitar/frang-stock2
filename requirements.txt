@@ -4,3 +4,4 @@ pandas
 twstock
 lxml
 supabase
+extra-streamlit-components
