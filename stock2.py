@@ -4,7 +4,7 @@ import pandas as pd
 import random
 import time
 import twstock
-from datetime import datetime
+from datetime import datetime, timedelta
 from supabase import create_client, Client
 # --- 外掛：Cookie 記憶功能 ---
 import extra_streamlit_components as st_tags
@@ -17,21 +17,24 @@ def get_cookie_manager():
 
 cookie_manager = get_cookie_manager()
 
-# 1. 自動登入邏輯：如果 session 是登出狀態，但瀏覽器有 Cookie
+# 1. 自動登入邏輯
 if not st.session_state.get('login'):
     saved_user = cookie_manager.get('saved_user')
     if saved_user:
-        # 這裡從 Supabase 抓取資料 (複製你原本登入成功的邏輯)
-        res = supabase.table("users").select("*").eq("username", saved_user).execute()
-        if res.data:
-            u = res.data[0]
-            st.session_state.update({
-                "login": True, "user": saved_user, "bal": u['balance'], 
-                "port": u['portfolio'], "history": u.get('history', []),
-                "watchlist": u.get('watchlist', [])
-            })
-            st.rerun()
-# --- 外掛結束 ---
+        # 注意：這裡假設 supabase 物件已在下方定義，若報錯請將此段移至 supabase 定義後
+        try:
+            res = supabase.table("users").select("*").eq("username", saved_user).execute()
+            if res.data:
+                u = res.data[0]
+                st.session_state.update({
+                    "login": True, "user": saved_user, "bal": u['balance'], 
+                    "port": u['portfolio'], "history": u.get('history', []),
+                    "watchlist": u.get('watchlist', [])
+                })
+                st.rerun()
+        except:
+            pass
+
 # --- 1. 初始化與 UI 樣式強化 ---
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 st.markdown("""
@@ -39,77 +42,52 @@ st.markdown("""
 /* 1. 基礎背景與全域文字 */
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #FFFFFF; }
 h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
-/* 📦 關鍵修正：解決 st.expander (折疊面板) 的白色區塊問題 */
 [data-testid="stExpander"] {
-    background-color: rgba(0, 20, 50, 0.9) !important; /* 面板主體變深藍 */
-    border: 1px solid #00E5FF !important; /* 給它一個青色邊框 */
+    background-color: rgba(0, 20, 50, 0.9) !important;
+    border: 1px solid #00E5FF !important;
     border-radius: 10px !important;
 }
-
-/* 修正折疊面板上方的「白色橫條」標題列 */
 [data-testid="stExpander"] summary {
-    background-color: #001233 !important; /* 標題背景變深藍 */
-    color: #FFFFFF !important; /* 標題文字變白色 */
+    background-color: #001233 !important;
+    color: #FFFFFF !important;
     border-radius: 10px 10px 0 0 !important;
 }
-
-/* 🔦 關鍵修正：讓面板內「淡色文字」(銀行帳號資訊) 變亮青色 */
 [data-testid="stExpander"] p, [data-testid="stNotificationContent"] p {
-    color: #00E5FF !important; /* 強制變為亮青色，確保一眼看到 */
+    color: #00E5FF !important;
     font-weight: 600 !important;
     text-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
 }
-
-/* 🔗 關鍵修正：將所有超連結改為白色 */
 a {
-    color: #FFFFFF !important; /* 平時顯示為白色 */
-    text-decoration: underline !important; /* 保留底線方便識別 */
+    color: #FFFFFF !important;
+    text-decoration: underline !important;
     font-weight: 500;
     transition: 0.3s;
 }
-
-/* 當滑鼠移到超連結上時變色（亮青色） */
 a:hover {
     color: #00E5FF !important;
     text-shadow: 0 0 10px #00E5FF;
 }
-/* 🌟 重點修正：強制讓所有元件上方的 Label (標籤) 變為純白色 */
-/* 包含 selectbox, multiselect, text_input 等所有標籤 */
 label[data-testid="stWidgetLabel"] p {
     color: #FFFFFF !important;
     font-size: 1.1rem !important;
     font-weight: 600 !important;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* 增加一點陰影讓字更清晰 */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
-/* 掃描完成的文字顏色 */
 [data-testid="stNotificationContent"] p {
     color: #00E5FF !important; 
     font-size: 1.1rem !important;
     font-weight: 700 !important;
     text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
 }
-/* 🚀 關鍵修正：將頂部分頁 (Tabs) 標籤文字強制設為白色 */
 .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
     color: #FFFFFF !important;
     font-size: 18px !important;
     font-weight: 600 !important;
 }
-
-/* 2. 下拉選單 (Selectbox) 內容文字維持黑色 (解決白底看不見字的問題) */
-div[role="listbox"] {
-    background-color: #FFFFFF !important;
-}
-div[role="option"] * {
-    color: #000000 !important; /* 下拉選項字體變黑 */
-}
-input[role="combobox"] {
-    color: #000000 !important; /* 搜尋框內字體變黑 */
-}
-
-/* 3. 封鎖表格欄位標題點擊 */
+div[role="listbox"] { background-color: #FFFFFF !important; }
+div[role="option"] * { color: #000000 !important; }
+input[role="combobox"] { color: #000000 !important; }
 [data-testid="stDataFrameColHeader"] { pointer-events: none !important; }
-
-/* 4. 股票卡片與按鈕樣式 */
 .stock-card {
     background: rgba(0, 40, 80, 0.85);
     border: 2px solid #00B0FF;
@@ -143,6 +121,7 @@ def get_all_tickers():
     for code, info in twstock.tpex.items():
         if len(code) == 4: mapping[f"{code}.TWO"] = f"{code} {getattr(info, 'name', '')} ({getattr(info, 'industry', '上櫃股')})"
     return mapping
+
 def run_full_scan(tickers_map):
     qualified = []
     status = st.empty()
@@ -155,50 +134,31 @@ def run_full_scan(tickers_map):
         status.markdown(f"📡 正在掃描 (突破均線糾結強勢策略): **{i}/{len(ticker_list)}** 檔")
         progress.progress(min(i / len(ticker_list), 1.0))
         try:
-            # 修改點：抓取更長的週期以計算週線 (150d -> 250d)
             data = yf.download(chunk, period="250d", group_by='ticker', progress=False, threads=True)
             for t in chunk:
                 try:
                     df = data[t].dropna() if len(chunk) > 1 else data.dropna()
                     if len(df) < 100: continue
-                    
-                    # --- A. 增加週線判斷數據 ---
-                    # 重新取樣成週線 (W) 並計算週 20MA
                     df_weekly = df['Close'].resample('W').last()
                     w_ma20 = df_weekly.rolling(20).mean().iloc[-1]
-                    
-                    # 日線數據
                     c = df['Close'].iloc[-1]
-                    p_c = df['Close'].iloc[-2] # 前一日收盤價
+                    p_c = df['Close'].iloc[-2]
                     v = df['Volume'].iloc[-1]
                     ma5, ma10, ma20, ma60 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1], df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(60).mean().iloc[-1]
                     ma60_p = df['Close'].rolling(60).mean().iloc[-2]
                     v20_a = df['Volume'].rolling(20).mean().iloc[-1]
-                    
-                    # 計算漲幅
                     day_ret = (c - p_c) / p_c
 
-                    # --- 修改後的條件判斷 ---
                     if (
-                        # 1. 基本糾結與多頭排列 (原本條件)
                         (max([ma5,ma10,ma20])-min([ma5,ma10,ma20]))/min([ma5,ma10,ma20]) <= 0.03 and 
                         ma60 > ma60_p and c > max([ma5,ma10,ma20,ma60]) and 
-                        
-                        # 2. 修改點 A：必須站在週 20MA 之上 (林恩如核心：長線趨勢)
                         c > w_ma20 and 
-                        
-                        # 3. 修改點 B：爆量 2 倍 + 漲幅 > 2.5%
                         v > (v20_a * 2.0) and 
                         day_ret >= 0.025 and 
-                        
-                        v >= 2000000 # 基本量能過濾
+                        v >= 2000000 
                     ):
-                        
                         industry_name = tickers_map.get(t).split('(')[-1].replace(')', '')
-                        
-                        # --- 修改點 C：停損線切換為 日 20MA (強勢股守則) ---
                         dynamic_stop = ma20 
-                        
                         qualified.append({
                             "代碼": t.split('.')[0], "全代碼": t, "產業": industry_name,
                             "現價": round(c, 2), "成交量": int(v // 2000), 
@@ -240,9 +200,8 @@ if not st.session_state.login:
                         "port": u['portfolio'], "history": u.get('history', []),
                         "watchlist": u.get('watchlist', [])
                     })
-# 【新增這行】：讓瀏覽器記住帳號 30 天
-cookie_manager.set('saved_user', user, expires_at=datetime.now() + timedelta(days=30)) 
-st.rerun()
+                    # 修正點：確保此兩行正確縮進在 if 內
+                    cookie_manager.set('saved_user', user, expires_at=datetime.now() + timedelta(days=30))
                     st.rerun()
                 else:
                     st.error("此帳號尚未註冊，請先輸入帳號並點擊註冊")
@@ -268,12 +227,9 @@ else:
     stat_col1.markdown(f"👤 您好, **{st.session_state.user}** | 💰 餘額: `${st.session_state.bal:,.0f}`")
     with stat_col2:
         if st.button("🚪 登出", key="logout"):
+            cookie_manager.delete('saved_user')
             st.session_state.clear()
-if st.button("🚪 登出", key="logout"):
-    cookie_manager.delete('saved_user') # 【新增這行】：登出就忘記帳號
-    st.session_state.clear()
-    st.rerun()
-           
+            st.rerun()
 
     tab1, tab2, tab3, tab4 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉", "📜 歷史損益", "⭐ 自選清單"])
     
@@ -340,18 +296,13 @@ if st.button("🚪 登出", key="logout"):
                     ticker_obj = yf.Ticker(tk)
                     hist = ticker_obj.history(period="65d")
                     now_p = hist['Close'].iloc[-1]
-                    
-                    # 計算即時的 20MA 與 60MA
                     live_ma20 = hist['Close'].rolling(20).mean().iloc[-1]
                     live_ma60 = hist['Close'].rolling(60).mean().iloc[-1]
-                    
                     cost_per_share = d['c'] / (d['q'] * 1000)
                     profit = (now_p * d['q'] * 1000) - d['c']
                     profit_rate = (profit / d['c']) * 100
                     total_unrealized_profit += profit
-                    
                     stock_id = tk.split('.')[0]
-                    # 停損參考買入時的設定值，但也顯示即時 MA 供參考
                     sl_val = d.get('stop_loss', max(live_ma20, live_ma60))
                     tp_val = d.get('take_profit', cost_per_share * 1.2)
 
