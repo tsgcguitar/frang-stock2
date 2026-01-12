@@ -6,7 +6,32 @@ import time
 import twstock
 from datetime import datetime
 from supabase import create_client, Client
+# --- 外掛：Cookie 記憶功能 ---
+import extra_streamlit_components as st_tags
 
+# 初始化 Cookie 管理器
+def get_cookie_manager():
+    if 'cookie_manager' not in st_tags.__dict__:
+        return st_tags.CookieManager()
+    return st_tags.CookieManager()
+
+cookie_manager = get_cookie_manager()
+
+# 1. 自動登入邏輯：如果 session 是登出狀態，但瀏覽器有 Cookie
+if not st.session_state.get('login'):
+    saved_user = cookie_manager.get('saved_user')
+    if saved_user:
+        # 這裡從 Supabase 抓取資料 (複製你原本登入成功的邏輯)
+        res = supabase.table("users").select("*").eq("username", saved_user).execute()
+        if res.data:
+            u = res.data[0]
+            st.session_state.update({
+                "login": True, "user": saved_user, "bal": u['balance'], 
+                "port": u['portfolio'], "history": u.get('history', []),
+                "watchlist": u.get('watchlist', [])
+            })
+            st.rerun()
+# --- 外掛結束 ---
 # --- 1. 初始化與 UI 樣式強化 ---
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 st.markdown("""
@@ -215,6 +240,9 @@ if not st.session_state.login:
                         "port": u['portfolio'], "history": u.get('history', []),
                         "watchlist": u.get('watchlist', [])
                     })
+# 【新增這行】：讓瀏覽器記住帳號 30 天
+cookie_manager.set('saved_user', user, expires_at=datetime.now() + timedelta(days=30)) 
+st.rerun()
                     st.rerun()
                 else:
                     st.error("此帳號尚未註冊，請先輸入帳號並點擊註冊")
@@ -241,7 +269,11 @@ else:
     with stat_col2:
         if st.button("🚪 登出", key="logout"):
             st.session_state.clear()
-            st.rerun()
+if st.button("🚪 登出", key="logout"):
+    cookie_manager.delete('saved_user') # 【新增這行】：登出就忘記帳號
+    st.session_state.clear()
+    st.rerun()
+           
 
     tab1, tab2, tab3, tab4 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉", "📜 歷史損益", "⭐ 自選清單"])
     
