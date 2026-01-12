@@ -74,7 +74,7 @@ label[data-testid="stWidgetLabel"] p {
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 [data-testid="stNotificationContent"] p {
-    color: #00E5FF !important; 
+    color: #FFFF00 !important; 
     font-size: 1.1rem !important;
     font-weight: 700 !important;
     text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
@@ -404,3 +404,4 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的")
+
