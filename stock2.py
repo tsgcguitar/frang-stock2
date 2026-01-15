@@ -17,11 +17,18 @@ def get_cookie_manager():
 
 cookie_manager = get_cookie_manager()
 
+# Supabase 連線資訊 (保持原樣)
+SUPABASE_URL = "https://jhphmcbqtprfhvdkklps.supabase.co"
+SUPABASE_KEY = "sb_publishable_qfe3kH2yYYXN_PI7KNCZMg_UJmcvJWE"
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+except:
+    st.error("⚠️ 雲端資料庫連線中斷")
+
 # 1. 自動登入邏輯
 if not st.session_state.get('login'):
     saved_user = cookie_manager.get('saved_user')
     if saved_user:
-        # 注意：這裡假設 supabase 物件已在下方定義，若報錯請將此段移至 supabase 定義後
         try:
             res = supabase.table("users").select("*").eq("username", saved_user).execute()
             if res.data:
@@ -103,14 +110,6 @@ input[role="combobox"] { color: #000000 !important; }
 .profit-down { color: #00E676 !important; font-size: 1.2em; font-weight: 900; }
 </style>
 """, unsafe_allow_html=True)
-
-# Supabase 連線
-SUPABASE_URL = "https://jhphmcbqtprfhvdkklps.supabase.co"
-SUPABASE_KEY = "sb_publishable_qfe3kH2yYYXN_PI7KNCZMg_UJmcvJWE"
-try:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-except:
-    st.error("⚠️ 雲端資料庫連線中斷")
 
 # --- 2. 核心功能函數 ---
 @st.cache_data(ttl=86400)
@@ -200,7 +199,6 @@ if not st.session_state.login:
                         "port": u['portfolio'], "history": u.get('history', []),
                         "watchlist": u.get('watchlist', [])
                     })
-                    # 修正點：確保此兩行正確縮進在 if 內
                     cookie_manager.set('saved_user', user, expires_at=datetime.now() + timedelta(days=30))
                     st.rerun()
                 else:
@@ -325,12 +323,18 @@ else:
                         est_back = s_qty * 1000 * now_p
                         st.markdown(f"**預計入帳金額： `${est_back:,.0f}`**")
                         if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
+                            # --- 修改點：計算已實現獲利 % ---
                             cost_of_sold = (s_qty / d['q']) * d['c']
                             realized_p = est_back - cost_of_sold
+                            realized_pct = round((realized_p / cost_of_sold) * 100, 2)
+                            
                             history_entry = {
                                 "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                                 "month": datetime.now().strftime("%Y-%m"),
-                                "stock": stock_id, "qty": s_qty, "profit": realized_p
+                                "stock": stock_id, 
+                                "qty": s_qty, 
+                                "profit": realized_p,
+                                "pct": f"{realized_pct}%"  # 新增百分比欄位
                             }
                             st.session_state.history.append(history_entry)
                             st.session_state.bal += est_back
@@ -362,7 +366,14 @@ else:
             total_realized = view_df['profit'].sum()
             summary_color = "#FF3D00" if total_realized >= 0 else "#00E676"
             st.markdown(f"#### 💰 該期間總已實現損益: <span style='color:{summary_color}'>${total_realized:,.0f}</span>", unsafe_allow_html=True)
-            st.dataframe(view_df[['date', 'stock', 'qty', 'profit']].sort_values('date', ascending=False), use_container_width=True)
+            
+            # --- 修改點：在顯示表格中加入 'pct' 欄位 ---
+            # 判斷 dataframe 是否有 pct 欄位 (舊資料可能沒有)
+            cols_to_show = ['date', 'stock', 'qty', 'profit']
+            if 'pct' in view_df.columns:
+                cols_to_show.append('pct')
+            
+            st.dataframe(view_df[cols_to_show].sort_values('date', ascending=False), use_container_width=True)
         else:
             st.info("尚無歷史成交紀錄")
 
@@ -404,5 +415,3 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的")
-
-
