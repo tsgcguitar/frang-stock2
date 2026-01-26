@@ -17,7 +17,7 @@ def get_cookie_manager():
 
 cookie_manager = get_cookie_manager()
 
-# Supabase 連線資訊 (保持原樣)
+# Supabase 連線資訊
 SUPABASE_URL = "https://jhphmcbqtprfhvdkklps.supabase.co"
 SUPABASE_KEY = "sb_publishable_qfe3kH2yYYXN_PI7KNCZMg_UJmcvJWE"
 try:
@@ -162,7 +162,8 @@ def run_full_scan(tickers_map):
                             "代碼": t.split('.')[0], "全代碼": t, "產業": industry_name,
                             "現價": round(c, 2), "成交量": int(v // 2000), 
                             "停損": round(dynamic_stop, 2), "停利": round(c*1.2, 2),
-                            "週20MA": round(w_ma20, 2)
+                            "週20MA": round(w_ma20, 2),
+                            "漲幅": round(day_ret * 100, 2) # <-- 修改點 1: 儲存漲幅百分比
                         })
                 except: continue
         except: continue
@@ -251,10 +252,12 @@ else:
             
             for s in display_list:
                 with st.container():
+                    # --- 修改點 2: 在 HTML 卡片中顯示漲幅百分比 ---
+                    pct_color = "profit-up" if s['漲幅'] >= 0 else "profit-down"
                     st.markdown(f"""
                     <div class='stock-card'>
                         <h3>{s['代碼']} - {s['產業']}</h3>
-                        <p>💰 目前價格: <span class='price-tag'>${s['現價']}</span> | 📊 成交量: {s['成交量']} 張</p>
+                        <p>💰 目前價格: <span class='price-tag'>${s['現價']}</span> (<span class='{pct_color}'>{s['漲幅']:+.2f}%</span>) | 📊 成交量: {s['成交量']} 張</p>
                         <p>🛑 動態停損(20MA): {s['停損']} | 🎯 預設停利: {s['停利']}</p>
                         <a href='https://www.wantgoo.com/stock/{s['代碼']}' target='_blank'>📈 查看線圖</a>
                     </div>""", unsafe_allow_html=True)
@@ -323,7 +326,6 @@ else:
                         est_back = s_qty * 1000 * now_p
                         st.markdown(f"**預計入帳金額： `${est_back:,.0f}`**")
                         if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
-                            # --- 修改點：計算已實現獲利 % ---
                             cost_of_sold = (s_qty / d['q']) * d['c']
                             realized_p = est_back - cost_of_sold
                             realized_pct = round((realized_p / cost_of_sold) * 100, 2)
@@ -334,7 +336,7 @@ else:
                                 "stock": stock_id, 
                                 "qty": s_qty, 
                                 "profit": realized_p,
-                                "pct": f"{realized_pct}%"  # 新增百分比欄位
+                                "pct": f"{realized_pct}%"
                             }
                             st.session_state.history.append(history_entry)
                             st.session_state.bal += est_back
@@ -367,8 +369,6 @@ else:
             summary_color = "#FF3D00" if total_realized >= 0 else "#00E676"
             st.markdown(f"#### 💰 該期間總已實現損益: <span style='color:{summary_color}'>${total_realized:,.0f}</span>", unsafe_allow_html=True)
             
-            # --- 修改點：在顯示表格中加入 'pct' 欄位 ---
-            # 判斷 dataframe 是否有 pct 欄位 (舊資料可能沒有)
             cols_to_show = ['date', 'stock', 'qty', 'profit']
             if 'pct' in view_df.columns:
                 cols_to_show.append('pct')
