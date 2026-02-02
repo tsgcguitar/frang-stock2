@@ -138,10 +138,14 @@ def run_full_scan(tickers_map):
                     if len(df) < 100: continue
                     
                     c = df['Close'].iloc[-1]
-                    p_c = df['Close'].iloc[-2]
-                    day_ret_pct = ((c - p_c) / p_c) * 100 
+                    # --- 修正 1: 漲幅邏輯改為 (現價 - 今日開盤價) / 今日開盤價 ---
+                    o = df['Open'].iloc[-1]
+                    day_ret_pct = ((c - o) / o) * 100 
                     
+                    # --- 修正 2: 成交量精確度修正為 Volume / 1000 (張數) ---
                     v = df['Volume'].iloc[-1]
+                    v_shares = int(v / 1000)
+                    
                     ma5 = df['Close'].rolling(5).mean().iloc[-1]
                     ma10 = df['Close'].rolling(10).mean().iloc[-1]
                     ma20 = df['Close'].rolling(20).mean().iloc[-1]
@@ -164,7 +168,7 @@ def run_full_scan(tickers_map):
                         industry_name = tickers_map.get(t).split('(')[-1].replace(')', '')
                         qualified.append({
                             "代碼": t.split('.')[0], "全代碼": t, "產業": industry_name,
-                            "現價": round(c, 2), "成交量": int(v // 2000), 
+                            "現價": round(c, 2), "成交量": v_shares, 
                             "停損": round(ma20, 2), "停利": round(c * 1.2, 2),
                             "週20MA": round(w_ma20, 2), "漲幅": round(day_ret_pct, 2)
                         })
