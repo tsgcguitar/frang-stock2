@@ -126,52 +126,83 @@ def run_full_scan(tickers_map):
     progress.empty(); status.empty()
     return qualified
 
-# --- 3. 登入/註冊功能 (完全保留) ---
-if 'login' not in st.session_state: st.session_state.login = False
+# --- 1. 初始化 Session State (確保不會報錯) ---
+if 'login' not in st.session_state:
+    st.session_state.login = False
+if 'user' not in st.session_state:
+    st.session_state.user = ""
 
+# --- 2. 登入/註冊功能 ---
 if not st.session_state.login:
     st.title("🏹 從從容容飆股王")
     st.markdown("### 🏆 買在起漲點，不追高雷達")
+    
     col1, col2 = st.columns(2)
     with col1: st.markdown("<div class='stock-card'><h3>🌙 月租版</h3><h1>$399</h1></div>", unsafe_allow_html=True)
     with col2: st.markdown("<div class='stock-card'><h3>☀️ 年費版</h3><h1>$2,990</h1></div>", unsafe_allow_html=True)
+    
     with st.expander("💳 顯示付款資訊"):
         st.info("🏦 永豐銀行 (807) | 帳號：148-018-00054187\n\n轉帳後截圖聯繫 Line: 811162 將於30分鐘內開通。")
     
     user = st.text_input("👤 帳號 (英數共4碼以上)").strip().lower()
     pwd = st.text_input("🔑 授權碼", type="password")
+    
     c_login, c_reg = st.columns(2)
+    
     with c_login:
         if st.button("🚀 登入系統"):
-            if pwd != "STOCK2026": st.error("授權碼 請聯繫Line: 811162開通")
+            if pwd != "STOCK2026": 
+                st.error("授權碼錯誤，請聯繫Line: 811162開通")
             else:
                 res = supabase.table("users").select("*").eq("username", user).execute()
                 if res.data:
                     u = res.data[0]
-                    st.session_state.update({"login": True, "user": user, "bal": u['balance'], "port": u['portfolio'], "history": u.get('history', []), "watchlist": u.get('watchlist', [])})
-                    cookie_manager.set('saved_user', user, expires_at=datetime.now() + timedelta(days=30))
+                    st.session_state.update({
+                        "login": True, 
+                        "user": user, 
+                        "bal": u['balance'], 
+                        "port": u['portfolio'], 
+                        "history": u.get('history', []), 
+                        "watchlist": u.get('watchlist', [])
+                    })
+                    # cookie_manager.set(...) # 確保你的 cookie_manager 已正確定義
                     st.rerun()
-                else: st.error("此帳號尚未註冊，請先輸入帳號並點擊註冊")
+                else: 
+                    st.error("此帳號尚未註冊，請先輸入帳號並點擊註冊")
+
     with c_reg:
         if st.button("📝 註冊帳號"):
-            if len(user) < 4: st.warning("帳號長度需為 4 碼以上")
-            elif pwd != "STOCK2026": st.error("授權碼 請聯繫Line: 811162開通")
+            if len(user) < 4: 
+                st.warning("帳號長度需為 4 碼以上")
+            elif pwd != "STOCK2026": 
+                st.error("授權碼錯誤，請聯繫Line: 811162開通")
             else:
                 res = supabase.table("users").select("*").eq("username", user).execute()
-                if res.data: st.warning("已有此會員帳號")
+                if res.data: 
+                    st.warning("已有此會員帳號")
                 else:
                     u = {"username": user, "balance": 1000000, "portfolio": {}, "history": [], "watchlist": []}
                     supabase.table("users").insert(u).execute()
                     st.success("註冊成功！請直接點擊登入")
+    
+    # 💡 關鍵：未登入時，強制停止後續程式碼執行
+    st.stop()
 
+# --- 3. 登入後才顯示的內容 (只有 login = True 才會走到這裡) ---
+stat_col1, stat_col2 = st.columns([5, 1])
+stat_col1.markdown(f"👤 您好, **{st.session_state.user}** | 💰 餘額: `${st.session_state.bal:,.0f}`")
 
-    stat_col1, stat_col2 = st.columns([5, 1])
-    stat_col1.markdown(f"👤 您好, **{st.session_state.user}** | 💰 餘額: `${st.session_state.bal:,.0f}`")
-    with stat_col2:
-        if st.button("🚪 登出", key="logout"):
-            cookie_manager.delete('saved_user'); st.session_state.clear(); st.rerun()
+with stat_col2:
+    if st.button("🚪 登出", key="logout"):
+        # cookie_manager.delete('saved_user')
+        st.session_state.clear()
+        st.rerun()
 
-    tab1, tab2, tab3, tab4 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉", "📜 歷史損益", "⭐ 自選清單"])
+tab1, tab2, tab3, tab4 = st.tabs(["🚀 飆股雷達", "💼 雲端模擬倉", "📜 歷史損益", "⭐ 自選清單"])
+
+with tab1:
+    st.write("這裡是飆股雷達內容...")
+# ... 其他 tab 內容
     
     # --- Tab 1: 飆股雷達 (買入介面修改：張/股分離) ---
     with tab1:
@@ -356,6 +387,7 @@ if not st.session_state.login:
                         supabase.table("users").update({"watchlist": st.session_state.watchlist}).eq("username", st.session_state.user).execute()
                         st.rerun()
         else: st.info("您的自選清單目前是空的")
+
 
 
 
