@@ -163,13 +163,7 @@ if not st.session_state.login:
                     u = {"username": user, "balance": 1000000, "portfolio": {}, "history": [], "watchlist": []}
                     supabase.table("users").insert(u).execute()
                     st.success("註冊成功！請直接點擊登入")
-# --- 4. 主程式分頁 ---
-else:
-    # 這裡原本是紅框，現在直接接後面的功能
-    stat_col1, stat_col2 = st.columns([5, 1])
-    stat_col1.markdown(f"👤 您好, **{st.session_state.user}** | 💰 餘額: `${st.session_state.bal:,.0f}`")
-    
-    # ... 後面其餘程式碼保持不變 ...
+
 
     stat_col1, stat_col2 = st.columns([5, 1])
     stat_col1.markdown(f"👤 您好, **{st.session_state.user}** | 💰 餘額: `${st.session_state.bal:,.0f}`")
@@ -362,5 +356,6 @@ else:
                         supabase.table("users").update({"watchlist": st.session_state.watchlist}).eq("username", st.session_state.user).execute()
                         st.rerun()
         else: st.info("您的自選清單目前是空的")
+
 
 
