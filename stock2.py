@@ -134,7 +134,7 @@ def run_full_scan(tickers_map):
         progress.progress(min(i / len(ticker_list), 1.0))
         try:
             data = yf.download(chunk, period="250d", group_by='ticker', progress=False, threads=True)
-        for t in chunk:
+     for t in chunk:
                 try:
                     # 抓取資料
                     df = data[t].dropna() if len(chunk) > 1 else data.dropna()
@@ -187,8 +187,7 @@ def run_full_scan(tickers_map):
             
     progress.empty()
     status.empty()
-    return qualified    
-
+    return qualified   
 # --- 3. 登入/註冊功能與介面 ---
 if 'login' not in st.session_state: st.session_state.login = False
 
@@ -443,6 +442,7 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的")
+
 
 
 
