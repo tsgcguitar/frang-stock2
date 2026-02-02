@@ -134,18 +134,18 @@ def run_full_scan(tickers_map):
         progress.progress(min(i / len(ticker_list), 1.0))
         try:
             data = yf.download(chunk, period="250d", group_by='ticker', progress=False, threads=True)
-     for t in chunk:
+            for t in chunk:
                 try:
-                    # 抓取資料
+                    # 1. 抓取資料
                     df = data[t].dropna() if len(chunk) > 1 else data.dropna()
                     if len(df) < 100: continue
                     
-                    # 1. 取得價格與計算漲幅 (當下漲幅邏輯)
+                    # 2. 計算價格與當下漲幅 (與看盤軟體同步)
                     c = df['Close'].iloc[-1]        # 當下最新成交價
-                    p_c = df['Close'].iloc[-2]      # 昨收價
+                    p_c = df['Close'].iloc[-2]      # 昨日收盤價
                     day_ret_pct = ((c - p_c) / p_c) * 100 
                     
-                    # 2. 計算成交量與技術指標 (必須先算出來，if 才能用)
+                    # 3. 技術指標計算 (必須在 if 之前)
                     v = df['Volume'].iloc[-1]
                     ma5 = df['Close'].rolling(5).mean().iloc[-1]
                     ma10 = df['Close'].rolling(10).mean().iloc[-1]
@@ -158,14 +158,14 @@ def run_full_scan(tickers_map):
                     df_weekly = df['Close'].resample('W').last()
                     w_ma20 = df_weekly.rolling(20).mean().iloc[-1]
 
-                    # 3. 判斷式
+                    # 4. 判斷條件 (使用當下漲幅 day_ret_pct)
                     if (
                         (max([ma5, ma10, ma20]) - min([ma5, ma10, ma20])) / min([ma5, ma10, ma20]) <= 0.03 and 
                         ma60 > ma60_p and 
                         c > max([ma5, ma10, ma20, ma60]) and 
                         c > w_ma20 and 
                         v > (v20_a * 2.0) and 
-                        day_ret_pct >= 2.5 and  # 直接判斷當下漲幅趴數
+                        day_ret_pct >= 2.5 and # <-- 漲幅條件：當下漲幅大於 2.5%
                         v >= 2000000 
                     ):
                         industry_name = tickers_map.get(t).split('(')[-1].replace(')', '')
@@ -180,14 +180,14 @@ def run_full_scan(tickers_map):
                             "週20MA": round(w_ma20, 2),
                             "漲幅": round(day_ret_pct, 2) 
                         })
-                except: 
+                except:
                     continue
-        except: 
+        except:
             continue
             
     progress.empty()
     status.empty()
-    return qualified   
+    return qualified
 # --- 3. 登入/註冊功能與介面 ---
 if 'login' not in st.session_state: st.session_state.login = False
 
@@ -442,6 +442,7 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的")
+
 
 
 
