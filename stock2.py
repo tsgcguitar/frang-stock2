@@ -267,7 +267,7 @@ else:
                         # 將 value 改為 1.0 (float)，step 設為 0.001 即可支援極小零股
                         qty = st.number_input("購買張數 (可輸入小數點)", min_value=0.001, value=1.0, step=0.1, key=f"q_{s['代碼']}")
                         total_cost = qty * 1000 * s['現價']
-                        st.markdown(f"**預計買入總金額： `${total_cost:,.2f}`**")
+                        st.markdown(f"**預計買入總金額： `${total_cost:,.3f}`**")
                         if st.button(f"確認買進 {qty} 張", key=f"btn_{s['代碼']}"):
                             if st.session_state.bal >= total_cost:
                                 st.session_state.bal -= total_cost
@@ -326,7 +326,7 @@ else:
                     with st.expander(f"💸 賣出 {stock_id}"):
                         s_qty = st.number_input("賣出張數 (可輸入小數點)", min_value=0.001, max_value=float(d['q']), value=float(d['q']), step=0.1, key=f"sq_{tk}")
                         est_back = s_qty * 1000 * now_p
-                        st.markdown(f"**預計入帳金額： `${est_back:,.2f}`**")
+                        st.markdown(f"**預計入帳金額： `${est_back:,.3f}`**")
                         if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
                             cost_of_sold = (s_qty / d['q']) * d['c']
                             realized_p = est_back - cost_of_sold
@@ -424,4 +424,5 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的")
+
 
