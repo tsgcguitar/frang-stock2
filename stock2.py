@@ -264,8 +264,10 @@ else:
                     
                     with st.expander(f"🛒 買進 {s['代碼']}"):
                         qty = st.number_input("購買張數", min_value=1, value=1, key=f"q_{s['代碼']}")
+                        # 將 value 改為 1.0 (float)，step 設為 0.001 即可支援極小零股
+                        qty = st.number_input("購買張數 (可輸入小數點)", min_value=0.001, value=1.0, step=0.1, key=f"q_{s['代碼']}")
                         total_cost = qty * 1000 * s['現價']
-                        st.markdown(f"**預計買入總金額： `${total_cost:,.0f}`**")
+                        st.markdown(f"**預計買入總金額： `${total_cost:,.2f}`**")
                         if st.button(f"確認買進 {qty} 張", key=f"btn_{s['代碼']}"):
                             if st.session_state.bal >= total_cost:
                                 st.session_state.bal -= total_cost
@@ -322,9 +324,9 @@ else:
                     </div>""", unsafe_allow_html=True)
                     
                     with st.expander(f"💸 賣出 {stock_id}"):
-                        s_qty = st.number_input("賣出張數", min_value=1, max_value=d['q'], value=d['q'], key=f"sq_{tk}")
+                        s_qty = st.number_input("賣出張數 (可輸入小數點)", min_value=0.001, max_value=float(d['q']), value=float(d['q']), step=0.1, key=f"sq_{tk}")
                         est_back = s_qty * 1000 * now_p
-                        st.markdown(f"**預計入帳金額： `${est_back:,.0f}`**")
+                        st.markdown(f"**預計入帳金額： `${est_back:,.2f}`**")
                         if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
                             cost_of_sold = (s_qty / d['q']) * d['c']
                             realized_p = est_back - cost_of_sold
@@ -342,7 +344,14 @@ else:
                             st.session_state.bal += est_back
                             st.session_state.port[tk]['q'] -= s_qty
                             st.session_state.port[tk]['c'] -= cost_of_sold
-                            if st.session_state.port[tk]['q'] <= 0: del st.session_state.port[tk]
+                            if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
+                               # ... 前面的計算邏輯不變 ...
+                               st.session_state.port[tk]['q'] -= s_qty
+                               st.session_state.port[tk]['c'] -= cost_of_sold
+    
+                               # 修改這裡：判斷剩餘張數是否近乎於 0 (處理浮點數誤差)
+                               if st.session_state.port[tk]['q'] < 0.0001: 
+                                    del st.session_state.port[tk]
                             supabase.table("users").update({
                                 "balance": st.session_state.bal, 
                                 "portfolio": st.session_state.port,
@@ -415,3 +424,4 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的")
+
