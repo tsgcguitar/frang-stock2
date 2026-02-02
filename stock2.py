@@ -135,37 +135,55 @@ def run_full_scan(tickers_map):
         try:
             data = yf.download(chunk, period="250d", group_by='ticker', progress=False, threads=True)
             for t in chunk:
-                try:
-                    df = data[t].dropna() if len(chunk) > 1 else data.dropna()
-                    if len(df) < 100: continue
-                    df_weekly = df['Close'].resample('W').last()
-                    w_ma20 = df_weekly.rolling(20).mean().iloc[-1]
-                    c = df['Close'].iloc[-1]
-                    p_c = df['Close'].iloc[-2]
-                    v = df['Volume'].iloc[-1]
-                    ma5, ma10, ma20, ma60 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1], df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(60).mean().iloc[-1]
-                    ma60_p = df['Close'].rolling(60).mean().iloc[-2]
-                    v20_a = df['Volume'].rolling(20).mean().iloc[-1]
-                    day_ret = (c - p_c) / p_c
+# --- 這裡開始修改 ---
+try:
+    df = data[t].dropna() if len(chunk) > 1 else data.dropna()
+    if len(df) < 100: continue
+    
+    # 關鍵：確保抓到的是「最後一天」跟「倒數第二天」
+    # 在 yf.download 的日 K 資料中：
+    c = df['Close'].iloc[-1]        # 當下現價
+    p_c = df['Close'].iloc[-2]      # 昨收價 (看盤軟體計算趴數的基準)
+    
+    # 計算漲幅趴數 (例如 0.03 -> 3.0)
+    day_ret_pct = ((c - p_c) / p_c) * 100 
 
-                    if (
-                        (max([ma5,ma10,ma20])-min([ma5,ma10,ma20]))/min([ma5,ma10,ma20]) <= 0.03 and 
-                        ma60 > ma60_p and c > max([ma5,ma10,ma20,ma60]) and 
-                        c > w_ma20 and 
-                        v > (v20_a * 2.0) and 
-                        day_ret >= 0.025 and 
-                        v >= 2000000 
-                    ):
-                        industry_name = tickers_map.get(t).split('(')[-1].replace(')', '')
-                        dynamic_stop = ma20 
-                        qualified.append({
-                            "代碼": t.split('.')[0], "全代碼": t, "產業": industry_name,
-                            "現價": round(c, 2), "成交量": int(v // 2000), 
-                            "停損": round(dynamic_stop, 2), "停利": round(c*1.2, 2),
-                            "週20MA": round(w_ma20, 2),
-                            "漲幅": round(day_ret * 100, 2) # <-- 修改點 1: 儲存漲幅百分比
-                        })
-                except: continue
+    # 原有的指標計算不變
+    v = df['Volume'].iloc[-1]
+    ma5 = df['Close'].rolling(5).mean().iloc[-1]
+    ma10 = df['Close'].rolling(10).mean().iloc[-1]
+    ma20 = df['Close'].rolling(20).mean().iloc[-1]
+    ma60 = df['Close'].rolling(60).mean().iloc[-1]
+    ma60_p = df['Close'].rolling(60).mean().iloc[-2]
+    v20_a = df['Volume'].rolling(20).mean().iloc[-1]
+    
+    # 週均線 (維持原樣)
+    df_weekly = df['Close'].resample('W').last()
+    w_ma20 = df_weekly.rolling(20).mean().iloc[-1]
+
+    # 修改判斷式中的 day_ret (改用我們算好的百分比)
+    if (
+        (max([ma5,ma10,ma20])-min([ma5,ma10,ma20]))/min([ma5,ma10,ma20]) <= 0.03 and 
+        ma60 > ma60_p and c > max([ma5,ma10,ma20,ma60]) and 
+        c > w_ma20 and 
+        v > (v20_a * 2.0) and 
+        day_ret_pct >= 2.5 and  # 直接判斷是否大於 2.5%
+        v >= 2000000 
+    ):
+        industry_name = tickers_map.get(t).split('(')[-1].replace(')', '')
+        dynamic_stop = ma20 
+        qualified.append({
+            "代碼": t.split('.')[0], 
+            "全代碼": t, 
+            "產業": industry_name,
+            "現價": round(c, 2), 
+            "成交量": int(v // 2000), 
+            "停損": round(dynamic_stop, 2), 
+            "停利": round(c*1.2, 2),
+            "週20MA": round(w_ma20, 2),
+            "漲幅": round(day_ret_pct, 2) # <-- 存入跟看盤軟體一樣的趴數
+        })
+except: continue
         except: continue
     progress.empty(); status.empty()
     return qualified
@@ -424,5 +442,6 @@ else:
                         st.rerun()
         else:
             st.info("您的自選清單目前是空的")
+
 
 
