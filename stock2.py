@@ -164,22 +164,6 @@ if not st.session_state.login:
                     supabase.table("users").insert(u).execute()
                     st.success("註冊成功！請直接點擊登入")
 
-# --- 4. 主程式分頁 ---
-else:
-    # --- 舊資料防護罩：自動將舊的「張」單位轉為「股」 ---
-    # 這段代碼確保如果資料庫裡存的是舊的「張數」(例如 5)，會自動乘 1000 變成 5000 股。
-    # 避免賣出時因單位不同導致庫存變負數。
-    if st.session_state.get('port'):
-        fix_needed = False
-        for tk, d in st.session_state.port.items():
-            # 如果數量小於 500，極大機率是舊系統存的「張數」
-            if d.get('q', 0) > 0 and d.get('q', 0) < 500: 
-                st.session_state.port[tk]['q'] = int(d['q'] * 1000)
-                fix_needed = True
-        if fix_needed:
-            # 靜默更新資料庫，不打擾用戶
-            supabase.table("users").update({"portfolio": st.session_state.port}).eq("username", st.session_state.user).execute()
-    # --------------------------------------------------
 
     stat_col1, stat_col2 = st.columns([5, 1])
     stat_col1.markdown(f"👤 您好, **{st.session_state.user}** | 💰 餘額: `${st.session_state.bal:,.0f}`")
@@ -372,3 +356,4 @@ else:
                         supabase.table("users").update({"watchlist": st.session_state.watchlist}).eq("username", st.session_state.user).execute()
                         st.rerun()
         else: st.info("您的自選清單目前是空的")
+
