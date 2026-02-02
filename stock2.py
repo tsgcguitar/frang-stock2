@@ -6,7 +6,6 @@ import time
 import twstock
 from datetime import datetime, timedelta
 from supabase import create_client, Client
-# --- 外掛：Cookie 記憶功能 ---
 import extra_streamlit_components as st_tags
 
 # 初始化 Cookie 管理器
@@ -46,7 +45,6 @@ if not st.session_state.get('login'):
 st.set_page_config(page_title="從從容容飆股王", layout="wide")
 st.markdown("""
 <style>
-/* 1. 基礎背景與全域文字 */
 .stApp { background: linear-gradient(to bottom right, #001233, #000814); color: #FFFFFF; }
 h1, h2, h3 { color: #00E5FF !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
 [data-testid="stExpander"] {
@@ -136,16 +134,13 @@ def run_full_scan(tickers_map):
             data = yf.download(chunk, period="250d", group_by='ticker', progress=False, threads=True)
             for t in chunk:
                 try:
-                    # 1. 抓取資料
                     df = data[t].dropna() if len(chunk) > 1 else data.dropna()
                     if len(df) < 100: continue
                     
-                    # 2. 計算價格與當下漲幅 (與看盤軟體同步)
-                    c = df['Close'].iloc[-1]        # 當下最新成交價
-                    p_c = df['Close'].iloc[-2]      # 昨日收盤價
+                    c = df['Close'].iloc[-1]
+                    p_c = df['Close'].iloc[-2]
                     day_ret_pct = ((c - p_c) / p_c) * 100 
                     
-                    # 3. 技術指標計算 (必須在 if 之前)
                     v = df['Volume'].iloc[-1]
                     ma5 = df['Close'].rolling(5).mean().iloc[-1]
                     ma10 = df['Close'].rolling(10).mean().iloc[-1]
@@ -154,41 +149,33 @@ def run_full_scan(tickers_map):
                     ma60_p = df['Close'].rolling(60).mean().iloc[-2]
                     v20_a = df['Volume'].rolling(20).mean().iloc[-1]
                     
-                    # 週線指標
                     df_weekly = df['Close'].resample('W').last()
                     w_ma20 = df_weekly.rolling(20).mean().iloc[-1]
 
-                    # 4. 判斷條件 (使用當下漲幅 day_ret_pct)
                     if (
                         (max([ma5, ma10, ma20]) - min([ma5, ma10, ma20])) / min([ma5, ma10, ma20]) <= 0.03 and 
                         ma60 > ma60_p and 
                         c > max([ma5, ma10, ma20, ma60]) and 
                         c > w_ma20 and 
                         v > (v20_a * 2.0) and 
-                        day_ret_pct >= 2.5 and # <-- 漲幅條件：當下漲幅大於 2.5%
+                        day_ret_pct >= 2.5 and 
                         v >= 2000000 
                     ):
                         industry_name = tickers_map.get(t).split('(')[-1].replace(')', '')
                         qualified.append({
-                            "代碼": t.split('.')[0], 
-                            "全代碼": t, 
-                            "產業": industry_name,
-                            "現價": round(c, 2), 
-                            "成交量": int(v // 2000), 
-                            "停損": round(ma20, 2), 
-                            "停利": round(c * 1.2, 2),
-                            "週20MA": round(w_ma20, 2),
-                            "漲幅": round(day_ret_pct, 2) 
+                            "代碼": t.split('.')[0], "全代碼": t, "產業": industry_name,
+                            "現價": round(c, 2), "成交量": int(v // 2000), 
+                            "停損": round(ma20, 2), "停利": round(c * 1.2, 2),
+                            "週20MA": round(w_ma20, 2), "漲幅": round(day_ret_pct, 2)
                         })
-                except:
-                    continue
-        except:
-            continue
+                except: continue
+        except: continue
             
     progress.empty()
     status.empty()
     return qualified
-# --- 3. 登入/註冊功能與介面 ---
+
+# --- 3. 登入/註冊功能 ---
 if 'login' not in st.session_state: st.session_state.login = False
 
 if not st.session_state.login:
@@ -204,41 +191,28 @@ if not st.session_state.login:
     pwd = st.text_input("🔑 授權碼", type="password")
     
     c_login, c_reg = st.columns(2)
-    
     with c_login:
         if st.button("🚀 登入系統"):
-            if pwd != "STOCK2026":
-                st.error("授權碼 請聯繫Line: 811162開通")
+            if pwd != "STOCK2026": st.error("授權碼 請聯繫Line: 811162開通")
             else:
                 res = supabase.table("users").select("*").eq("username", user).execute()
                 if res.data:
                     u = res.data[0]
-                    st.session_state.update({
-                        "login": True, "user": user, "bal": u['balance'], 
-                        "port": u['portfolio'], "history": u.get('history', []),
-                        "watchlist": u.get('watchlist', [])
-                    })
+                    st.session_state.update({"login": True, "user": user, "bal": u['balance'], "port": u['portfolio'], "history": u.get('history', []), "watchlist": u.get('watchlist', [])})
                     cookie_manager.set('saved_user', user, expires_at=datetime.now() + timedelta(days=30))
                     st.rerun()
-                else:
-                    st.error("此帳號尚未註冊，請先輸入帳號並點擊註冊")
-
+                else: st.error("此帳號尚未註冊，請先輸入帳號並點擊註冊")
     with c_reg:
         if st.button("📝 註冊帳號"):
-            if len(user) < 4:
-                st.warning("帳號長度需為 4 碼以上")
-            elif pwd != "STOCK2026":
-                st.error("授權碼 請聯繫Line: 811162開通")
+            if len(user) < 4: st.warning("帳號長度需為 4 碼以上")
+            elif pwd != "STOCK2026": st.error("授權碼 請聯繫Line: 811162開通")
             else:
                 res = supabase.table("users").select("*").eq("username", user).execute()
-                if res.data:
-                    st.warning("已有此會員帳號")
+                if res.data: st.warning("已有此會員帳號")
                 else:
                     u = {"username": user, "balance": 1000000, "portfolio": {}, "history": [], "watchlist": []}
                     supabase.table("users").insert(u).execute()
                     st.success("註冊成功！請直接點擊登入")
-
-# --- 4. 主程式分頁 ---
 else:
     stat_col1, stat_col2 = st.columns([5, 1])
     stat_col1.markdown(f"👤 您好, **{st.session_state.user}** | 💰 餘額: `${st.session_state.bal:,.0f}`")
@@ -252,25 +226,19 @@ else:
     
     with tab1:
         if st.button("🔍 開始 1800 檔全量掃描"):
-            res = run_full_scan(get_all_tickers())
-            st.session_state.scan_res = res 
+            st.session_state.scan_res = run_full_scan(get_all_tickers())
         
         if 'scan_res' in st.session_state:
-            sort_col1, sort_col2 = st.columns([1, 2])
-            with sort_col1:
-                sort_opt = st.selectbox("🔃 排序方式", ["預設", "現價 (高→低)", "現價 (低→高)", "成交量 (大→小)", "按產業"])
-            
+            sort_opt = st.selectbox("🔃 排序方式", ["預設", "現價 (高→低)", "現價 (低→高)", "成交量 (大→小)", "按產業"])
             display_list = st.session_state.scan_res.copy()
             if sort_opt == "現價 (高→低)": display_list.sort(key=lambda x: x['現價'], reverse=True)
             elif sort_opt == "現價 (低→高)": display_list.sort(key=lambda x: x['現價'])
             elif sort_opt == "成交量 (大→小)": display_list.sort(key=lambda x: x['成交量'], reverse=True)
             elif sort_opt == "按產業": display_list.sort(key=lambda x: x['產業'])
 
-            st.success(f"🎯 掃描完成！共找到 {len(display_list)} 檔符合條件標的 (停損取 20MA)")
-            
+            st.success(f"🎯 掃描完成！共找到 {len(display_list)} 檔符合條件標的")
             for s in display_list:
                 with st.container():
-                    # --- 修改點 2: 在 HTML 卡片中顯示漲幅百分比 ---
                     pct_color = "profit-up" if s['漲幅'] >= 0 else "profit-down"
                     st.markdown(f"""
                     <div class='stock-card'>
@@ -279,18 +247,15 @@ else:
                         <p>🛑 動態停損(20MA): {s['停損']} | 🎯 預設停利: {s['停利']}</p>
                         <a href='https://www.wantgoo.com/stock/{s['代碼']}' target='_blank'>📈 查看線圖</a>
                     </div>""", unsafe_allow_html=True)
-                    
                     with st.expander(f"🛒 買進 {s['代碼']}"):
-                        qty = st.number_input("購買張數", min_value=1, value=1, key=f"q_{s['代碼']}")
-                        # 將 value 改為 1.0 (float)，step 設為 0.001 即可支援極小零股
-                        qty = st.number_input("購買張數 (可輸入小數點)", min_value=0.001, value=1.0, step=0.1, key=f"q_{s['代碼']}")
+                        qty = st.number_input("購買張數 (可輸入小數點)", min_value=0.001, value=1.0, step=0.1, key=f"q_buy_{s['代碼']}")
                         total_cost = qty * 1000 * s['現價']
                         st.markdown(f"**預計買入總金額： `${total_cost:,.3f}`**")
-                        if st.button(f"確認買進 {qty} 張", key=f"btn_{s['代碼']}"):
+                        if st.button(f"確認買進 {s['代碼']}", key=f"btn_buy_{s['代碼']}"):
                             if st.session_state.bal >= total_cost:
                                 st.session_state.bal -= total_cost
                                 tk = s['全代碼']
-                                st.session_state.port[tk] = st.session_state.port.get(tk, {'q':0, 'c':0, 'stop_loss': s['停損'], 'take_profit': s['停利']})
+                                if tk not in st.session_state.port: st.session_state.port[tk] = {'q':0, 'c':0, 'stop_loss': s['停損'], 'take_profit': s['停利']}
                                 st.session_state.port[tk]['q'] += qty
                                 st.session_state.port[tk]['c'] += total_cost
                                 supabase.table("users").update({"balance": st.session_state.bal, "portfolio": st.session_state.port}).eq("username", st.session_state.user).execute()
@@ -302,14 +267,11 @@ else:
         col_bal, col_reset = st.columns([3, 1])
         col_bal.markdown(f"### 💰 帳戶餘額: `${st.session_state.bal:,.0f}`")
         if col_reset.button("⚠️ 重置 100 萬"):
-            st.session_state.bal = 1000000
-            st.session_state.port = {}
-            st.session_state.history = []
+            st.session_state.update({"bal": 1000000, "port": {}, "history": []})
             supabase.table("users").update({"balance": 1000000, "portfolio": {}, "history": []}).eq("username", st.session_state.user).execute()
             st.rerun()
 
-        if st.button("🔄 刷新即時損益金額"):
-            st.rerun()
+        if st.button("🔄 刷新即時損益金額"): st.rerun()
 
         if st.session_state.port:
             for tk, d in list(st.session_state.port.items()):
@@ -327,66 +289,30 @@ else:
                     sl_val = d.get('stop_loss', max(live_ma20, live_ma60))
                     tp_val = d.get('take_profit', cost_per_share * 1.2)
 
-                    if now_p <= sl_val:
-                        st.error(f"⚠️ 股票代號 \"{stock_id}\" 已低於停損位 {sl_val:.2f}，建議賣出")
+                    if now_p <= sl_val: st.error(f"⚠️ 股票代號 \"{stock_id}\" 已低於停損位 {sl_val:.2f}")
                     
                     color = "profit-up" if profit >= 0 else "profit-down"
-                    st.markdown(f"""
-                    <div class='stock-card'>
-                        <h4>{stock_id} ({d['q']} 張)</h4>
-                        <p>損益金額: <span class='{color}'>${profit:,.0f}</span> ({profit_rate:.2f}%)</p>
-                        <p>成本價: {cost_per_share:.2f} | 現價: {now_p:.2f}</p>
-                        <p>📊 即時 20MA: {live_ma20:.2f} | 60MA: {live_ma60:.2f}</p>
-                        <p>🛑 買入停損: {sl_val:.2f} | 🎯 預設停利: {tp_val:.2f}</p>
-                        <a href='https://www.wantgoo.com/stock/{stock_id}' target='_blank'>📈 查看即時線圖</a>
-                    </div>""", unsafe_allow_html=True)
+                    st.markdown(f"""<div class='stock-card'><h4>{stock_id} ({d['q']} 張)</h4><p>損益: <span class='{color}'>${profit:,.0f}</span> ({profit_rate:.2f}%)</p><p>成本: {cost_per_share:.2f} | 現價: {now_p:.2f}</p></div>""", unsafe_allow_html=True)
                     
                     with st.expander(f"💸 賣出 {stock_id}"):
-                        s_qty = st.number_input("賣出張數 (可輸入小數點)", min_value=0.001, max_value=float(d['q']), value=float(d['q']), step=0.1, key=f"sq_{tk}")
+                        s_qty = st.number_input("賣出張數", min_value=0.001, max_value=float(d['q']), value=float(d['q']), step=0.1, key=f"sq_sell_{tk}")
                         est_back = s_qty * 1000 * now_p
-                        st.markdown(f"**預計入帳金額： `${est_back:,.3f}`**")
-                        if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
+                        if st.button(f"執行賣出 {stock_id}", key=f"sbtn_{tk}"):
                             cost_of_sold = (s_qty / d['q']) * d['c']
-                            realized_p = est_back - cost_of_sold
-                            realized_pct = round((realized_p / cost_of_sold) * 100, 2)
-                            
-                            history_entry = {
-                                "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                "month": datetime.now().strftime("%Y-%m"),
-                                "stock": stock_id, 
-                                "qty": s_qty, 
-                                "profit": realized_p,
-                                "pct": f"{realized_pct}%"
-                            }
-                            st.session_state.history.append(history_entry)
+                            st.session_state.history.append({"date": datetime.now().strftime("%Y-%m-%d %H:%M"), "month": datetime.now().strftime("%Y-%m"), "stock": stock_id, "qty": s_qty, "profit": est_back - cost_of_sold, "pct": f"{round(((est_back-cost_of_sold)/cost_of_sold)*100,2)}%"})
                             st.session_state.bal += est_back
                             st.session_state.port[tk]['q'] -= s_qty
                             st.session_state.port[tk]['c'] -= cost_of_sold
-                            if st.button(f"執行賣出 {s_qty} 張", key=f"sbtn_{tk}"):
-                               # ... 前面的計算邏輯不變 ...
-                               st.session_state.port[tk]['q'] -= s_qty
-                               st.session_state.port[tk]['c'] -= cost_of_sold
-    
-                               # 修改這裡：判斷剩餘張數是否近乎於 0 (處理浮點數誤差)
-                               if st.session_state.port[tk]['q'] < 0.0001: 
-                                    del st.session_state.port[tk]
-                            supabase.table("users").update({
-                                "balance": st.session_state.bal, 
-                                "portfolio": st.session_state.port,
-                                "history": st.session_state.history
-                            }).eq("username", st.session_state.user).execute()
+                            if st.session_state.port[tk]['q'] < 0.0001: del st.session_state.port[tk]
+                            supabase.table("users").update({"balance": st.session_state.bal, "portfolio": st.session_state.port, "history": st.session_state.history}).eq("username", st.session_state.user).execute()
                             st.success("賣出成功！"); st.rerun()
-                except Exception as e:
-                    st.warning(f"正在更新 {tk} 數據中...")
-
+                except: continue
             st.divider()
             sum_color = "profit-up" if total_unrealized_profit >= 0 else "profit-down"
             st.markdown(f"### 📈 總未實現損益: <span class='{sum_color}'>${total_unrealized_profit:,.0f}</span>", unsafe_allow_html=True)
-        else:
-            st.info("目前庫存空空如也")
+        else: st.info("目前庫存空空如也")
 
     with tab3:
-        st.markdown("### 📊 已實現損益歷史")
         if st.session_state.history:
             df_hist = pd.DataFrame(st.session_state.history)
             month_list = ["全部"] + sorted(list(df_hist['month'].unique()), reverse=True)
@@ -394,56 +320,25 @@ else:
             view_df = df_hist if sel_month == "全部" else df_hist[df_hist['month'] == sel_month]
             total_realized = view_df['profit'].sum()
             summary_color = "#FF3D00" if total_realized >= 0 else "#00E676"
-            st.markdown(f"#### 💰 該期間總已實現損益: <span style='color:{summary_color}'>${total_realized:,.0f}</span>", unsafe_allow_html=True)
-            
-            cols_to_show = ['date', 'stock', 'qty', 'profit']
-            if 'pct' in view_df.columns:
-                cols_to_show.append('pct')
-            
-            st.dataframe(view_df[cols_to_show].sort_values('date', ascending=False), use_container_width=True)
-        else:
-            st.info("尚無歷史成交紀錄")
+            st.markdown(f"#### 💰 總損益: <span style='color:{summary_color}'>${total_realized:,.0f}</span>", unsafe_allow_html=True)
+            st.dataframe(view_df[['date', 'stock', 'qty', 'profit', 'pct']].sort_values('date', ascending=False), use_container_width=True)
+        else: st.info("尚無歷史成交紀錄")
 
     with tab4:
-        st.markdown("### ⭐ 個人追蹤清單")
         tickers_map = get_all_tickers()
-        c1, c2 = st.columns([3, 1])
-        with c1:
-            selected_stock = st.selectbox("🔍 搜尋並加入股票代號", options=list(tickers_map.keys()), 
-                                        format_func=lambda x: tickers_map.get(x))
-        with c2:
-            st.write(" ")
-            if st.button("➕ 加入自選"):
-                if 'watchlist' not in st.session_state: st.session_state.watchlist = []
-                if selected_stock not in st.session_state.watchlist:
-                    st.session_state.watchlist.append(selected_stock)
-                    supabase.table("users").update({"watchlist": st.session_state.watchlist}).eq("username", st.session_state.user).execute()
-                    st.rerun()
-                else:
-                    st.toast("已在清單中")
+        selected_stock = st.selectbox("🔍 搜尋並加入股票代號", options=list(tickers_map.keys()), format_func=lambda x: tickers_map.get(x))
+        if st.button("➕ 加入自選"):
+            if selected_stock not in st.session_state.watchlist:
+                st.session_state.watchlist.append(selected_stock)
+                supabase.table("users").update({"watchlist": st.session_state.watchlist}).eq("username", st.session_state.user).execute()
+                st.rerun()
         st.divider()
         if st.session_state.get('watchlist'):
             for wt in st.session_state.watchlist:
                 sid = wt.split('.')[0]
-                sinfo = tickers_map.get(wt, sid)
                 with st.container():
-                    st.markdown(f"""
-                    <div class='stock-card' style='padding: 15px;'>
-                        <div style='display: flex; justify-content: space-between; align-items: center;'>
-                            <div>
-                                <h4 style='margin:0;'>{sinfo}</h4>
-                                <a href='https://www.wantgoo.com/stock/{sid}' target='_blank'>📈 查看線圖</a>
-                            </div>
-                        </div>
-                    </div>""", unsafe_allow_html=True)
+                    st.markdown(f"<div class='stock-card'><h4>{tickers_map.get(wt, sid)}</h4></div>", unsafe_allow_html=True)
                     if st.button(f"🗑️ 移除 {sid}", key=f"rem_{sid}"):
                         st.session_state.watchlist.remove(wt)
                         supabase.table("users").update({"watchlist": st.session_state.watchlist}).eq("username", st.session_state.user).execute()
                         st.rerun()
-        else:
-            st.info("您的自選清單目前是空的")
-
-
-
-
-
