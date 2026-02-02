@@ -104,22 +104,50 @@ def run_full_scan(tickers_map):
                 try:
                     df = data[t].dropna() if len(chunk) > 1 else data.dropna()
                     if len(df) < 100: continue
+                    
+                    # --- 邏輯調整區開始 ---
+                    c = df['Close'].iloc[-1]   # 目前最新價
+                    o = df['Open'].iloc[-1]    # 今日開盤價 (關鍵修改點)
+                    
+                    # 計算【開盤至今】的漲幅，而不是【對比昨日】
+                    # 這樣就算昨天漲停，今天平盤開出，day_ret 就是 0%
+                    day_ret = (c - o) / o 
+                    
+                    # 原本的昨日對比 (保留僅作為過濾條件，或直接移除)
+                    p_c = df['Close'].iloc[-2]
+                    total_ret = (c - p_c) / p_c # 對比昨收的總漲幅
+                    # --- 邏輯調整區結束 ---
+
                     df_weekly = df['Close'].resample('W').last()
                     w_ma20 = df_weekly.rolling(20).mean().iloc[-1]
-                    c = df['Close'].iloc[-1]
-                    p_c = df['Close'].iloc[-2]
                     v = df['Volume'].iloc[-1]
                     ma5, ma10, ma20, ma60 = df['Close'].rolling(5).mean().iloc[-1], df['Close'].rolling(10).mean().iloc[-1], df['Close'].rolling(20).mean().iloc[-1], df['Close'].rolling(60).mean().iloc[-1]
                     ma60_p = df['Close'].rolling(60).mean().iloc[-2]
                     v20_a = df['Volume'].rolling(20).mean().iloc[-1]
-                    day_ret = (c - p_c) / p_c
-                    if ((max([ma5,ma10,ma20])-min([ma5,ma10,ma20]))/min([ma5,ma10,ma20]) <= 0.03 and ma60 > ma60_p and c > max([ma5,ma10,ma20,ma60]) and c > w_ma20 and v > (v20_a * 2.0) and day_ret >= 0.025 and v >= 2000000):
+
+                    # 篩選條件：
+                    # 1. 均線糾結 3% 內
+                    # 2. 站上所有均線
+                    # 3. 成交量爆量 2 倍
+                    # 4. day_ret >= 0.025 (代表今天開盤後已經拉了 2.5% 以上，正在發動中)
+                    # 5. total_ret < 0.09  (新增選配：避開已經快漲停買不到的)
+                    
+                    if ((max([ma5,ma10,ma20])-min([ma5,ma10,ma20]))/min([ma5,ma10,ma20]) <= 0.03 and 
+                        ma60 > ma60_p and 
+                        c > max([ma5,ma10,ma20,ma60]) and 
+                        c > w_ma20 and 
+                        v > (v20_a * 2.0) and 
+                        day_ret >= 0.025 and # 這是開盤至今的漲幅
+                        total_ret < 0.09 and # 避開漲幅已超過 9% 買不到的
+                        v >= 2000000):
+                        
                         industry_name = tickers_map.get(t).split('(')[-1].replace(')', '')
                         qualified.append({
                             "代碼": t.split('.')[0], "全代碼": t, "產業": industry_name,
                             "現價": round(c, 2), "成交量": int(v // 2000), 
                             "停損": round(ma20, 2), "停利": round(c*1.2, 2),
-                            "週20MA": round(w_ma20, 2), "漲幅": round(day_ret * 100, 2)
+                            "週20MA": round(w_ma20, 2), 
+                            "漲幅": round(day_ret * 100, 2) # 這裡顯示的是今日開盤至今的趴數
                         })
                 except: continue
         except: continue
@@ -387,6 +415,7 @@ with tab1:
                         supabase.table("users").update({"watchlist": st.session_state.watchlist}).eq("username", st.session_state.user).execute()
                         st.rerun()
         else: st.info("您的自選清單目前是空的")
+
 
 
 
