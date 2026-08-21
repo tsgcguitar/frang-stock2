@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="從從容容飆股王 - 靜態作品集 Demo" />
+  <title>從從容容飆股王｜Demo</title>
+  <style>
+    :root{
+      --bg:#07111f; --panel:#0e1b2d; --panel2:#12243a; --line:#213a56;
+      --text:#eef7ff; --muted:#8ea6bc; --cyan:#35d6ff; --blue:#1596ff;
+      --green:#32d583; --red:#ff6b6b; --yellow:#f7c948;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Microsoft JhengHei",sans-serif;background:linear-gradient(135deg,#07111f,#09172a 65%,#06101c);color:var(--text);min-height:100vh}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .hidden{display:none!important}
+    .wrap{max-width:1180px;margin:auto;padding:24px}
+    .topbar{position:sticky;top:0;z-index:5;background:rgba(7,17,31,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+    .topbar-inner{max-width:1180px;margin:auto;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;gap:14px}
+    .brand{font-size:20px;font-weight:800;color:var(--cyan)}
+    .demo-tag{padding:6px 10px;border:1px solid #27526f;border-radius:999px;color:#bfefff;font-size:12px}
+    .card{background:linear-gradient(180deg,rgba(18,36,58,.95),rgba(10,24,41,.95));border:1px solid var(--line);border-radius:16px;box-shadow:0 14px 35px rgba(0,0,0,.22)}
+    .login-shell{min-height:calc(100vh - 70px);display:grid;place-items:center;padding:36px 20px}
+    .login-card{width:min(860px,100%);padding:34px}
+    .hero-title{font-size:clamp(34px,6vw,62px);margin:0;color:var(--cyan);line-height:1.05}
+    .hero-sub{color:#c9eafa;font-size:20px;margin:12px 0 8px}
+    .muted{color:var(--muted)}
+    .grid2{display:grid;grid-template-columns:1.25fr .75fr;gap:22px}
+    .feature-list{display:grid;gap:10px;margin-top:24px}
+    .feature{padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:#0a192a;color:#dcefff}
+    .login-box{padding:22px;background:#091726;border:1px solid var(--line);border-radius:14px}
+    label{display:block;font-size:13px;color:#9fb5ca;margin:12px 0 6px}
+    input,select{width:100%;background:#071320;border:1px solid #29435e;color:white;border-radius:10px;padding:12px 13px;outline:none}
+    input:focus,select:focus{border-color:var(--cyan)}
+    .btn{border:0;border-radius:10px;padding:11px 15px;font-weight:800}
+    .btn-primary{background:linear-gradient(180deg,var(--cyan),var(--blue));color:#04111d}
+    .btn-ghost{background:#0a1a2a;color:#d9ecfb;border:1px solid var(--line)}
+    .btn-danger{background:#3d1821;color:#ffb4bd;border:1px solid #6d2937}
+    .btn-sm{padding:8px 11px;font-size:13px}
+    .full{width:100%;margin-top:14px}
+    .dashboard{padding:24px 0 46px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
+    .stat{padding:17px}
+    .stat .k{font-size:12px;color:var(--muted)}
+    .stat .v{font-size:24px;font-weight:850;margin-top:5px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}
+    .tab{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:#0b1928;color:#cfe7f7}
+    .tab.active{background:#13314a;border-color:#27739b;color:white}
+    .section{padding:22px}
+    .section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    .section h2{margin:0;font-size:20px}
+    .stock-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .stock{padding:17px;border:1px solid var(--line);background:#0a192a;border-radius:14px}
+    .stock-title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .stock-code{font-size:22px;font-weight:900}
+    .pill{font-size:12px;padding:5px 8px;border-radius:999px;background:#15324a;color:#aee9ff}
+    .price{font-size:26px;font-weight:850;margin:12px 0 5px}
+    .up{color:#ff7c7c}.down{color:#4bdd98}.neutral{color:#cce5f5}
+    .meta{font-size:13px;color:#93abc0;line-height:1.7}
+    .row-actions{display:flex;gap:8px;margin-top:13px}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+    table{width:100%;border-collapse:collapse;min-width:720px}
+    th,td{text-align:left;padding:12px;border-bottom:1px solid #1d334b;font-size:14px}
+    th{background:#0a1725;color:#98b3c8}
+    tr:last-child td{border-bottom:0}
+    .empty{padding:34px;text-align:center;color:#829bb1}
+    .notice{background:#0d2232;border:1px solid #24516b;color:#bde9ff;padding:12px 14px;border-radius:12px;margin:14px 0}
+    .watch-add{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:16px}
+    .watch-list{display:grid;gap:10px}
+    .watch-item{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid var(--line);border-radius:12px;background:#0a192a}
+    .toast{position:fixed;right:22px;bottom:22px;z-index:20;padding:13px 16px;border-radius:12px;background:#10263a;border:1px solid #2f6786;box-shadow:0 15px 40px rgba(0,0,0,.35)}
+    .small{font-size:12px}
+    @media(max-width:900px){.grid2{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.stock-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:620px){.wrap{padding:16px}.stats{grid-template-columns:1fr 1fr}.stock-grid{grid-template-columns:1fr}.login-card{padding:22px}.section{padding:16px}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">🏹 從從容容飆股王</div>
+      <div class="demo-tag">作品集 Demo｜資料為模擬</div>
+    </div>
+  </header>
+
+  <main id="loginView" class="login-shell">
+    <div class="login-card card">
+      <div class="grid2">
+        <section>
+          <h1 class="hero-title">從從容容<br>飆股王</h1>
+          <div class="hero-sub">🏆 買在起漲點，不追高雷達</div>
+          <p class="muted">此版本為純前端作品集展示，不連線 Supabase、不抓即時股價，也不會進行真實交易。</p>
+          <div class="feature-list">
+            <div class="feature">🚀 模擬「突破均線糾結強勢策略」掃描結果</div>
+            <div class="feature">💼 100 萬虛擬資金模擬買賣與未實現損益</div>
+            <div class="feature">📜 歷史損益紀錄與 ⭐ 自選清單</div>
+          </div>
+        </section>
+        <aside class="login-box">
+          <h2 style="margin-top:0">Demo 登入</h2>
+          <label>帳號</label>
+          <input id="username" value="demo" placeholder="輸入任意名稱" />
+          <label>Demo 授權碼</label>
+          <input value="DEMO2026" disabled />
+          <button id="loginBtn" class="btn btn-primary full">🚀 進入 Demo</button>
+          <p class="muted small">不需註冊、不會儲存個資；操作狀態只保留在目前瀏覽器。</p>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <main id="appView" class="hidden">
+    <div class="wrap dashboard">
+      <div class="section-head">
+        <div>
+          <div class="muted small">歡迎回來</div>
+          <h1 id="hello" style="margin:3px 0 0;font-size:28px">demo</h1>
+        </div>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm">🚪 登出</button>
+      </div>
+
+      <div class="stats">
+        <div class="card stat"><div class="k">可用餘額</div><div id="balanceStat" class="v">$1,000,000</div></div>
+        <div class="card stat"><div class="k">持倉市值</div><div id="marketStat" class="v">$0</div></div>
+        <div class="card stat"><div class="k">未實現損益</div><div id="unrealizedStat" class="v neutral">$0</div></div>
+        <div class="card stat"><div class="k">已實現損益</div><div id="realizedStat" class="v neutral">$0</div></div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="radar">🚀 飆股雷達</button>
+        <button class="tab" data-tab="portfolio">💼 雲端模擬倉</button>
+        <button class="tab" data-tab="history">📜 歷史損益</button>
+        <button class="tab" data-tab="watch">⭐ 自選清單</button>
+      </div>
+
+      <section id="tab-radar" class="card section tab-panel">
+        <div class="section-head">
+          <div><h2>🚀 飆股雷達</h2><div class="muted small">模擬 1,800 檔股票掃描</div></div>
+          <button id="scanBtn" class="btn btn-primary">🔍 開始掃描</button>
+        </div>
+        <div id="scanNotice" class="notice">按下「開始掃描」即可顯示符合條件的 Demo 標的。</div>
+        <div id="stockGrid" class="stock-grid"></div>
+      </section>
+
+      <section id="tab-portfolio" class="card section tab-panel hidden">
+        <div class="section-head">
+          <div><h2>💼 模擬持倉</h2><div class="muted small">起始資金 100 萬元</div></div>
+          <button id="resetBtn" class="btn btn-danger btn-sm">⚠️ 重置 100 萬</button>
+        </div>
+        <div id="portfolioArea"></div>
+      </section>
+
+      <section id="tab-history" class="card section tab-panel hidden">
+        <div class="section-head"><div><h2>📜 已實現損益歷史</h2><div class="muted small">模擬成交紀錄</div></div></div>
+        <div id="historyArea"></div>
+      </section>
+
+      <section id="tab-watch" class="card section tab-panel hidden">
+        <div class="section-head"><div><h2>⭐ 個人追蹤清單</h2><div class="muted small">加入常看的股票</div></div></div>
+        <div class="watch-add">
+          <select id="watchSelect"></select>
+          <button id="addWatchBtn" class="btn btn-primary">➕ 加入自選</button>
+        </div>
+        <div id="watchArea" class="watch-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    const mockStocks = [
+      {code:'2330',name:'台積電',industry:'半導體',price:1185,volume:42800,stop:1096,take:1422,change:3.2},
+      {code:'2382',name:'廣達',industry:'電腦及週邊',price:312.5,volume:33700,stop:291.4,take:375,change:2.8},
+      {code:'6669',name:'緯穎',industry:'電腦及週邊',price:3170,volume:2650,stop:2965,take:3804,change:4.1},
+      {code:'3231',name:'緯創',industry:'電腦及週邊',price:143.5,volume:61500,stop:132.8,take:172.2,change:2.6},
+      {code:'3017',name:'奇鋐',industry:'電子零組件',price:962,volume:18100,stop:890,take:1154,change:5.0},
+      {code:'2345',name:'智邦',industry:'通信網路',price:948,volume:9200,stop:875,take:1138,change:3.6}
+    ];
+
+    const initialState = {balance:1000000, portfolio:{}, history:[], watchlist:[]};
+    let state = loadState();
+    let scanned = false;
+
+    function loadState(){
+      try{return {...initialState,...JSON.parse(localStorage.getItem('stockDemoState')||'{}')}}catch{return structuredClone(initialState)}
+    }
+    function saveState(){localStorage.setItem('stockDemoState',JSON.stringify(state));updateStats()}
+    function money(n){return '$'+Math.round(n).toLocaleString('zh-TW')}
+    function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),1800)}
+    function stockByCode(code){return mockStocks.find(s=>s.code===code)}
+
+    document.getElementById('loginBtn').onclick=()=>{
+      const user=document.getElementById('username').value.trim()||'demo';
+      localStorage.setItem('stockDemoUser',user);
+      document.getElementById('hello').textContent=`👤 ${user}`;
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('appView').classList.remove('hidden');
+      updateAll();
+    };
+    document.getElementById('logoutBtn').onclick=()=>location.reload();
+
+    document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(x=>x.classList.add('hidden'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.dataset.tab).classList.remove('hidden');
+      if(btn.dataset.tab==='portfolio') renderPortfolio();
+      if(btn.dataset.tab==='history') renderHistory();
+      if(btn.dataset.tab==='watch') renderWatch();
+    });
+
+    document.getElementById('scanBtn').onclick=()=>{
+      const btn=document.getElementById('scanBtn');
+      const n=document.getElementById('scanNotice');
+      btn.disabled=true; btn.textContent='📡 掃描中...'; n.textContent='正在模擬掃描 1,800 檔上市櫃股票...';
+      setTimeout(()=>{scanned=true;btn.disabled=false;btn.textContent='🔍 重新掃描';n.textContent='🎯 掃描完成！共找到 6 檔符合 Demo 條件標的。';renderRadar()},900)
+    };
+
+    function renderRadar(){
+      const g=document.getElementById('stockGrid');
+      g.innerHTML=scanned?mockStocks.map(s=>`
+        <article class="stock">
+          <div class="stock-title"><div><div class="stock-code">${s.code}</div><div class="muted small">${s.name}</div></div><span class="pill">${s.industry}</span></div>
+          <div class="price">${s.price.toLocaleString()} <span class="up small">▲ ${s.change}%</span></div>
+          <div class="meta">成交量：${s.volume.toLocaleString()} 張<br>🛑 動態停損：${s.stop.toLocaleString()}<br>🎯 預設停利：${s.take.toLocaleString()}</div>
+          <div class="row-actions"><button class="btn btn-primary btn-sm" onclick="buy('${s.code}')">🛒 模擬買進 1 張</button><button class="btn btn-ghost btn-sm" onclick="addWatch('${s.code}')">⭐ 自選</button></div>
+        </article>`).join(''):'';
+    }
+
+    function buy(code){
+      const s=stockByCode(code), cost=s.price*1000;
+      if(state.balance<cost){toast('餘額不足');return}
+      const p=state.portfolio[code]||{qty:0,cost:0};
+      p.qty+=1;p.cost+=cost;state.portfolio[code]=p;state.balance-=cost;saveState();toast(`已模擬買進 ${code} 1 張`)
+    }
+
+    function sell(code){
+      const p=state.portfolio[code], s=stockByCode(code); if(!p)return;
+      const avg=p.cost/p.qty; const proceeds=s.price*1000; const realized=proceeds-avg;
+      p.qty-=1;p.cost-=avg;state.balance+=proceeds;
+      state.history.unshift({date:new Date().toLocaleString('zh-TW',{hour12:false}),stock:code,qty:1,profit:realized,pct:realized/avg*100});
+      if(p.qty<=0) delete state.portfolio[code];saveState();renderPortfolio();renderHistory();toast(`已模擬賣出 ${code} 1 張`)
+    }
+
+    function renderPortfolio(){
+      const area=document.getElementById('portfolioArea'), entries=Object.entries(state.portfolio);
+      if(!entries.length){area.innerHTML='<div class="empty">目前庫存空空如也</div>';return}
+      area.innerHTML='<div class="stock-grid">'+entries.map(([code,p])=>{
+        const s=stockByCode(code), market=s.price*1000*p.qty, profit=market-p.cost, avg=p.cost/(p.qty*1000);
+        return `<article class="stock"><div class="stock-code">${code} ${s.name}</div><div class="price ${profit>=0?'up':'down'}">${money(profit)}</div><div class="meta">持有：${p.qty} 張<br>平均成本：${avg.toFixed(2)}<br>現價：${s.price.toLocaleString()}<br>市值：${money(market)}</div><div class="row-actions"><button class="btn btn-danger btn-sm" onclick="sell('${code}')">💸 賣出 1 張</button></div></article>`
+      }).join('')+'</div>';
+    }
+
+    function renderHistory(){
+      const a=document.getElementById('historyArea');
+      if(!state.history.length){a.innerHTML='<div class="empty">尚無歷史成交紀錄</div>';return}
+      a.innerHTML=`<div class="table-wrap"><table><thead><tr><th>時間</th><th>股票</th><th>張數</th><th>已實現損益</th><th>報酬率</th></tr></thead><tbody>${state.history.map(h=>`<tr><td>${h.date}</td><td>${h.stock}</td><td>${h.qty}</td><td class="${h.profit>=0?'up':'down'}">${money(h.profit)}</td><td>${h.pct.toFixed(2)}%</td></tr>`).join('')}</tbody></table></div>`;
+    }
+
+    const watchSelect=document.getElementById('watchSelect');
+    watchSelect.innerHTML=mockStocks.map(s=>`<option value="${s.code}">${s.code} ${s.name}（${s.industry}）</option>`).join('');
+    document.getElementById('addWatchBtn').onclick=()=>addWatch(watchSelect.value);
+    function addWatch(code){if(!state.watchlist.includes(code)){state.watchlist.push(code);saveState();renderWatch();toast(`已加入 ${code}`)}else toast('已在自選清單中')}
+    function removeWatch(code){state.watchlist=state.watchlist.filter(x=>x!==code);saveState();renderWatch()}
+    function renderWatch(){
+      const a=document.getElementById('watchArea');
+      if(!state.watchlist.length){a.innerHTML='<div class="empty">您的自選清單目前是空的</div>';return}
+      a.innerHTML=state.watchlist.map(code=>{const s=stockByCode(code);return `<div class="watch-item"><div><strong>${s.code} ${s.name}</strong><div class="muted small">${s.industry}｜Demo 現價 ${s.price.toLocaleString()}</div></div><button class="btn btn-danger btn-sm" onclick="removeWatch('${code}')">🗑 移除</button></div>`}).join('');
+    }
+
+    function updateStats(){
+      let market=0,unrealized=0;Object.entries(state.portfolio).forEach(([code,p])=>{const s=stockByCode(code);const m=s.price*1000*p.qty;market+=m;unrealized+=m-p.cost});
+      const realized=state.history.reduce((a,b)=>a+b.profit,0);
+      document.getElementById('balanceStat').textContent=money(state.balance);
+      document.getElementById('marketStat').textContent=money(market);
+      const u=document.getElementById('unrealizedStat');u.textContent=money(unrealized);u.className='v '+(unrealized>0?'up':unrealized<0?'down':'neutral');
+      const r=document.getElementById('realizedStat');r.textContent=money(realized);r.className='v '+(realized>0?'up':realized<0?'down':'neutral');
+    }
+    function updateAll(){updateStats();renderRadar();renderPortfolio();renderHistory();renderWatch()}
+    document.getElementById('resetBtn').onclick=()=>{state=structuredClone(initialState);saveState();updateAll();toast('已重置為 100 萬虛擬資金')};
+  </script>
+</body>
+</html>
